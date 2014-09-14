@@ -151,6 +151,7 @@ nav li {
 .home    nav .home    a,
 .reports nav .reports a,
 .code    nav .code    a,
+.courses nav .courses a,
 .blog    nav .blog    a {
     cursor: default;
     font-weight: bold;
@@ -221,6 +222,19 @@ nav li {
             justify-content: center;
 }
 
+/* ========
+    Coures
+   ======== */
+.courses dt {
+    /*font-family: source-sans-pro, sans;
+    font-weight: normal; */
+}
+
+.courses dd {
+    margin: 0 0 1.375em 2.75em;
+}
+
+
 /* ==============
    Custom styles
    ============== */
@@ -237,7 +251,9 @@ a:active {
     text-decoration: underline;
 }
 
-a[href^="/"] { color: #002626; }
+/* a[href^="/"]     { color: #222; font-weight: bold; } */
+header a[href^="/"] { color: #222; }
+
 
 h1 {
     text-align: center;
