@@ -1,0 +1,29 @@
+---
+layout: blog
+---
+<article>
+  <header>
+    <h1><a href="{{ page.url }}" rel="bookmark" title="link to this post">{{ page.title }}</a></h1>
+  </header>
+    
+  {{ content }}
+
+  <footer>
+    <p>
+      Posted on <time datetime="{{ page.date | date: "%Y-%m-%d" }}" pubdate>{{ page.date | date: "%B %d, %Y" }}</time>.
+    </p>
+  </footer>
+</article>
+<nav>
+  <ul>
+    {% if page.next %}
+    <li><a href="{{ page.next.url }}" rel="next">Newer Post</a></li>
+    {% endif %}
+    <li><a href="/blog" rel="archives">Archives</a></li>
+    {% if page.previous %}
+    <li><a href="{{ page.previous.url }}" rel="prev">Older Post</a></li>
+    {% endif %}
+ </ul>
+</nav>
+
+

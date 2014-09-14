@@ -1,0 +1,12 @@
+---
+layout: post
+title: Blog Move
+category: Meta
+---
+
+Here’s a quick heads for anyone who is still following this blog. You may have noticed that posting has become stagnant lately. The main reason for this is have been busy finishing [my PhD dissertation](http://arxiv.org/abs/0909.3052), and didn’t work at all on side projects. I’ve also been deterred by WordPress (my blog software) being a bit unwieldy. The first problem has been solved; I am a doctor now. The second problem will be solved, when I move my site over to [Jekyll](http://wiki.github.com/mojombo/jekyll).
+
+The downside of the transition to Jekyll is that the RSS feed might break. Also, I might be lazy and break some of the links to the blog posts. I apologize to all 20 of you subscribers.
+
+The upside of all of this is that I hope to be updating more frequently in the future.
+

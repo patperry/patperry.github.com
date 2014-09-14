@@ -1,0 +1,25 @@
+---
+layout: default
+stylesheet: /css/main.css
+---
+<div id="container" class="{{ page.section }} wrapper">
+  <div class="header-container">
+    <header>
+      <h1 class="title"><a href="/">Patrick O. Perry</a></h1>
+      <nav role="navigation">
+        <ul>
+          <li class="home"   ><a href="/"       >Home</a></li>
+          <li class="reports"><a href="/reports">Reports</a></li>
+          <li class="code"   ><a href="/code"   >Code</a></li>
+          <li class="blog"   ><a href="/blog"   >Blog</a></li>
+        </ul>
+      </nav>
+    </header>
+  </div>
+
+  <div class="main-container">
+    <main role="main">
+        {{ content }}
+    </main>
+  </div>
+</div>

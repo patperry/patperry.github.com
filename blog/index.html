@@ -1,0 +1,20 @@
+---
+layout: blog
+title: Blog - Archives
+section: blog
+---
+
+<div class="archives">
+  <h1><a href="/blog" rel="bookmark" title="link to this page">Archives</a></h1>
+
+  <table>
+    {% for post in site.categories.blog %}
+    <tr>
+      <td class="pd">{{ post.date | date: "%Y"}}</td>
+      <td class="pd">{{ post.date | date: "%b"}}</td>
+      <td class="pd">{{ post.date | date: "%d"}}</td>
+      <td class="pt"><a href="{{ post.url }}" title="{{ post.title }}">{{ post.title }}</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
