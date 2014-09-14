@@ -1,0 +1,47 @@
+Plots with ggplot2
+------------------
+We can use the ggplot2 package to make visual summaries of the 
+values stored in a data frame.  To do this, we must fist load the 
+ggplot2 package by running the command
+```{r}
+library("ggplot2")
+```
+
+To make a histogram, we use the command
+```{r}
+ggplot(bikedata, aes(passing.distance)) + geom_histogram()
+```
+This command involves a many subcomponents, whose meanings are
+as follow:
+
+  * The `ggplot` function creates a new *plot object*.
+  
+  * The first argument `bikedata` is the data frame that stores
+    the values to use in the plot.
+    
+  * The second argument, `aes(passing.distance)` specifies the
+    *aesthetic mappings* between the data frame variables and the
+    plot object.  In this case, `passing.distance` gets mapped
+    to the plot variable.
+    
+  * By itself, the subcommand
+    `ggplot2(bikedata, aes(passing.distance))`
+    creates an empty plot object where `passing.distance` is the
+    plot variable.  This subcommand does not produce any output.
+    
+  * The subcommand `+ geom_histogram()` means
+    "add a histogram geometric object (geom) to the plot object".
+
+We specify with bin width, and color, change the axis labels, and 
+add a title using the command
+```{r, tidy=FALSE}
+(ggplot(bikedata, aes(passing.distance))
+  + geom_histogram(binwidth=0.1, color="darkgreen", fill="white")
+  + xlab("Passing Distance")
+  + ylab("Count")
+  + ggtitle("Histogram of Passing Distance"))
+```
+
+
+See the [ggplot documentation](http://docs.ggplot2.org/current) for many other ways to customize your plots.
+

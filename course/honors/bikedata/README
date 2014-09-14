@@ -1,0 +1,37 @@
+bikedata.csv
+------------
+
+2355 rows total
+
+Vehicle
+1 ordinary car
+2 LGV/minibus
+3 SUV/pickup
+4 bus
+5 HGV
+6 taxi
+7 PTW
+
+Colour
+1 blue
+2 red
+3 sliver/grey
+4 white
+5 black
+6 green
+9 other
+99 unknown
+
+Street
+1 one-way (one lane)
+2 one-way (two lanes)
+3 regular urban street
+4 regular residential street
+5 main road, regular
+6 rural
+
+City
+1 Salisbury
+2 Bristol
+3 Portsmouth
+

@@ -1,0 +1,385 @@
+name <- "nsend2"
+attr(x, "labels") <- paste(name, "(",#
+				   rep(intervals1, times=length(intervals2)),#
+				   ", "#
+				   rep(intervals2, each=length(intervals1)),#
+				   ")")
+attr(x, "labels") <- paste(name, "(",#
+				   rep(intervals1, times=length(intervals2)),#
+				   ", ",#
+				   rep(intervals2, each=length(intervals1)),#
+				   ")", sep="")
+x
+matrix(attr(x, "labels"), length(intervals1), length(intervals2))
+?glm
+counts <- c(18,17,15,20,10,20,25,13,12)#
+outcome <- gl(3,1,9)#
+treatment <- gl(3,3)#
+print(d.AD <- data.frame(treatment, outcome, counts))#
+glm.D93 <- glm(counts ~ outcome + treatment, family = poisson())
+names(glm.D93)
+glm.D93$converged
+length(names(glm.D93))
+glm.D93$model
+class(glm.D93$model)
+?glm
+glm.fit
+glm
+lm
+normal()
+poisson()
+poisson()$aic
+glm
+glm.fit
+names(glm.D93)
+glm.D93$deviance
+with(glm.D93, aic - deviance)
+poisson()$aic
+poisson()$deviance
+poisson()$dev
+binomial()$dev
+binomial()$aic
+gaussian()$aic
+n <- 500; m <- 5000
+x <- matrix(rnorm(n*m), n, m)
+system.time(s <- svd(x))
+setwd("~/Projects/bikedata")
+data <- read.csv("bikedata.csv")
+?read.csv
+data <- read.csv("bikedata.csv", header=TRUE)
+nrow(data)
+head(data)
+vehicle <- factor(c("Car", "LGV", "SUV", "Bus", "HGV", "Taxi"))
+vehicle
+?factor
+data$vehicle <- vehicle[data$vehicle]
+head(data)
+colour <- factor(c("Blue", "Red", "Grey", "White", "Black", "Green", "Other"))#
+    data$colour[data$colour == 99] <- NA#
+    data$colour <- colour[data$colour]
+head(data)
+summary(data)
+?as.factor
+data$street
+as.factor(data$street, levels = c("OneWay1", "OneWay2", "Urban", "Residential", "Main",#
+                       "Rural")))
+as.factor(data$street, levels = c("OneWay1", "OneWay2", "Urban", "Residential", "Main",#
+                       "Rural")))
+as.factor(data$street, levels = c("OneWay1", "OneWay2", "Urban", "Residential", "Main",#
+                       "Rural"))
+?as.factor
+as.factor(data$street, levels=1:6, labels= c("OneWay1", "OneWay2", "Urban", "Residential", "Main",#
+                       "Rural"))
+?as.factor
+factor(data$street, levels=1:6, labels= c("OneWay1", "OneWay2", "Urban", "Residential", "Main",#
+                       "Rural"))
+"Rural"))
+?factor
+factor(c(1, 2, 99), levels=1:2, exclude=99)
+data <- read.csv("bikedata.csv", header=TRUE)#
+#
+    data$vehicle <- factor(data$vehicle,#
+                           levels=1:7,#
+                           labels=c("Car", "LGV", "SUV", "Bus", "HGV",#
+                                    "Taxi", "PTW"))#
+#
+    data$colour <- factor(data$colour,#
+                          levels=c(1:6, 9),#
+                          labels=c("Blue", "Red", "Grey", "White", "Black",#
+                                   "Green", "Other"),#
+                          exclude=99)#
+#
+    data$street <- factor(data$street,#
+                          levels = 1:6,#
+                          labels = c("OneWay1", "OneWay2", "Urban",#
+                                     "Residential", "Main", "Rural"))
+head(data)
+summary(data)
+read.data <- function() {#
+    data <- read.csv("bikedata.csv", header=TRUE)#
+#
+    data$vehicle <- factor(data$vehicle,#
+                           levels = 1:7,#
+                           labels = c("Car", "LGV", "SUV", "Bus", "HGV",#
+                                      "Taxi", "PTW"))#
+#
+    data$colour <- factor(data$colour,#
+                          levels = c(1:6, 9),#
+                          labels = c("Blue", "Red", "Grey", "White", "Black",#
+                                    "Green", "Other"),#
+                          exclude = 99)#
+#
+    data$street <- factor(data$street,#
+                          levels = 1:6,#
+                          labels = c("OneWay1", "OneWay2", "Urban",#
+                                     "Residential", "Main", "Rural"))#
+#
+    data$city <- factor(data$city,#
+                        levels = 1:3,#
+                        labels = c("Salisbury", "Bristol", "Portsmouth"))#
+#
+    data#
+}
+data <- read.data()
+data <- read.csv("bikedata.csv", header = TRUE)
+data$vehicle <- factor(data$vehicle,#
+                           levels = 1:7,#
+                           labels = c("Car", "LGV", "SUV", "Bus", "HGV",#
+                                      "Taxi", "PTW"))
+data$colour <- factor(data$colour,#
+                          levels = c(1:6, 9),#
+                          labels = c("Blue", "Red", "Grey", "White", "Black",#
+                                    "Green", "Other"),#
+                          exclude = 99)
+data$street <- factor(data$street,#
+                          levels = 1:6,#
+                          labels = c("OneWay1", "OneWay2", "Urban",#
+                                     "Residential", "Main", "Rural"))
+head(data)
+data$City <- factor(data$City,#
+                        levels = 1:3,#
+                        labels = c("Salisbury", "Bristol", "Portsmouth"))
+head(data)
+as.logical(data$Bikeline)
+logical(data$Bikeline)
+as.logical(data$Bikelane)
+logical(data$Bikelane)
+data <- read.csv("bikedata.csv", header = TRUE)#
+#
+    data$vehicle <- factor(data$vehicle,#
+                           levels = 1:7,#
+                           labels = c("Car", "LGV", "SUV", "Bus", "HGV",#
+                                      "Taxi", "PTW"))#
+#
+    data$colour <- factor(data$colour,#
+                          levels = c(1:6, 9),#
+                          labels = c("Blue", "Red", "Grey", "White", "Black",#
+                                    "Green", "Other"),#
+                          exclude = 99)#
+#
+    data$street <- factor(data$street,#
+                          levels = 1:6,#
+                          labels = c("OneWay1", "OneWay2", "Urban",#
+                                     "Residential", "Main", "Rural"))#
+#
+    data$city <- factor(data$City,#
+                        levels = 1:3,#
+                        labels = c("Salisbury", "Bristol", "Portsmouth"))#
+    data$City <- NULL#
+#
+    data$helmet <- as.logical(data$Helmet)#
+    data$Helmet <- NULL#
+#
+    data$bikelane <- as.logical(data$Bikelane)#
+    data$Bikelane <- NULL
+data <- read.csv("bikedata.csv", header = TRUE)
+head(data)
+data$Time
+as.character(data$Time)
+as.POSIXct(as.character(data$Time), tz="UTC")
+?as.POSIXct
+strptime(as.character(data$Time), format="%H:%M", tz="UTC")
+?strptime
+head(data)
+paste(data$date, data$Time)
+strptime(paste(data$date, data$Time), format=" %H:%M", tz="UTC")
+?strptime
+strptime(paste(data$date, data$Time), format="%d-%b %H:%M", tz="UTC")
+strptime(paste("2006-", data$date, " ", data$Time, sep=""), format="%Y-%d-%b %H:%M", tz="UTC")
+strptime(paste("2006-", data$date, " ", data$Time, sep=""), format="%Y-%d-%b %H:%M", tz="GMT")
+class(strptime(paste("2006-", data$date, " ", data$Time, sep=""), format="%Y-%d-%b %H:%M", tz="GMT"))
+strptime(paste("2006-", data$date, " ", data$Time, sep=""), format="%Y-%d-%b %H:%M", tz="GMT")
+?strptime
+as.POSIXct(strptime(paste("2006-", data$date, " ", data$Time, sep=""), format="%Y-%d-%b %H:%M", tz="GMT"))
+read.data <- function() {#
+    data <- read.csv("bikedata.csv", header = TRUE)#
+#
+    data$vehicle <- factor(data$vehicle,#
+                           levels = 1:7,#
+                           labels = c("Car", "LGV", "SUV", "Bus", "HGV",#
+                                      "Taxi", "PTW"))#
+#
+    data$colour <- factor(data$colour,#
+                          levels = c(1:6, 9),#
+                          labels = c("Blue", "Red", "Grey", "White", "Black",#
+                                    "Green", "Other"),#
+                          exclude = 99)#
+#
+    data$street <- factor(data$street,#
+                          levels = 1:6,#
+                          labels = c("OneWay1", "OneWay2", "Urban",#
+                                     "Residential", "Main", "Rural"))#
+#
+    data$datetime <- as.POSIXct(strptime(paste("2006-", data$date, " ",#
+                                               data$Time, sep=""),#
+                                         format = "%Y-%d-%b %H:%M", tz = "GMT"))#
+    data$Time <- NULL#
+    data$hour <- NULL#
+    data$date <- NULL#
+#
+    data$helmet <- as.logical(data$helmet)#
+#
+    data$bikelane <- as.logical(data$Bikelane)#
+    data$Bikelane <- NULL#
+#
+    data$city <- factor(data$City,#
+                        levels = 1:3,#
+                        labels = c("Salisbury", "Bristol", "Portsmouth"))#
+    data$City <- NULL#
+#
+    data#
+}
+data <- read.data()
+head(data)
+lm(passing.distance ~ kerb + helmet, data=data)
+summary(lm(passing.distance ~ kerb + helmet, data=data))
+summary(lm(passing.distance ~ kerb * helmet, data=data))
+summary(lm(sqrt(passing.distance) ~ kerb * helmet, data=data))
+summary(lm(sqrt(passing.distance) ~ kerb + helmet, data=data))
+summary(lm((passing.distance) ~ kerb + helmet, data=data))
+summary(lm(sqrt(passing.distance) ~ kerb + helmet, data=data))
+summary(lm(sqrt(passing.distance) ~ kerb * helmet, data=data))
+boxplot(passing.distance, data=data)
+boxplot(data$passing.distance)
+plot(sort(data$passing.distance))
+qqnorm(data$passing.distance)
+qqnorm(sqrt(data$passing.distance))
+require(adtest)
+require(nortest)
+with(data, ad.test(passing.distance))
+with(data, ad.test(sqrt(passing.distance)))
+with(data, ad.test(log10(passing.distance)))
+qqnorm(log10(passing.distance))
+with(data, qqnorm(log10(passing.distance)))
+with(data, plot(sort(log10(passing.distance))))
+with(data, plot(sort(sqrt(passing.distance))))
+with(data, plot(sort(log10(passing.distance))))
+qqnorm(data, plot(sort(log10(passing.distance))))
+hist(data$passing.distance, "Scott")
+hist(sqrt(data$passing.distance), "Scott")
+hist(log10(data$passing.distance), "Scott")
+?hist
+boxplot(log10(data$passing.distance))
+hist(log10(data$passing.distance), "Scott")
+model <- lm(log10(data$passing.distance) ~ kerb, data)
+model
+model <- lm(log10(data$passing.distance) ~ kerb + helmet, data)
+model
+summary(model)
+model <- lm(log10(data$passing.distance) ~ helmet, data)
+summary(model)
+model <- lm((data$passing.distance) ~ helmet, data)
+model <- lm(log(data$passing.distance) ~ helmet, data)
+plot(model)
+leverage(model)
+help.search("leverage")
+help.search("cook")
+influence.measures(model)
+head(influence.measures(model))
+influence.measures(model)
+?influence.measures
+cooks.distance(model)
+plot(sort(cooks.distance(model)))
+which.max(cooks.distance(model)))
+which.max(cooks.distance(model)
+)
+which.max(cooks.distance(model))
+model <- lm(log(data$passing.distance) ~ helmet, data[-988,])
+model <- lm(log(data$passing.distance) ~ helmet, data=data[-988,])
+data[-988]
+model <- lm(log(passing.distance) ~ helmet, data=data[-988,])
+summary(model)
+model <- lm(log10(passing.distance) ~ helmet, data=data[-988,])
+data[988,]
+plot(sort(cooks.distance(model)))
+which.max(cooks.distance(model)
+)
+model <- lm(log(passing.distance) ~ helmet, data=data[-c(988,2040),])
+summary(model)
+model <- lm(log(passing.distance) ~ helmet, data=data[-c(988),])
+summary(model)
+model0 <- lm(log(passing.distance) ~ helmet, data=data)
+summary(model0)
+model0 <- lm(log(passing.distance) ~ kerb + helmet, data=data)
+summary(model0)
+plot(sort(influence.measures(model0)))
+plot(sort(cooks.distance(model0)))
+which(cooks.distance(model0) > .01)
+model1 <- lm(log(passing.distance) ~ kerb + helmet, data=data[-c(988,1059),])
+summary(model1)
+model0 <- lm(log10(passing.distance) ~ kerb + helmet, data = data)
+model1 <- lm(log10(passing.distance) ~ kerb + helmet, data=data[-c(988,1059),])
+summary(model1)
+summary(model0)
+10^(-.0149)
+median(log10(data$passing.distance))
+18 * 10^(-.0149)
+median((data$passing.distance))
+1.529 * .96
+t.test(passing.distance ~ helmet, data)
+t.test(log10(passing.distance) ~ helmet, data)
+rnorm(5, mean=30.2, sd=.1)
+t.test(passing.distance, subset(data, kerb == 0.5))
+t.test(data$passing.distance, subset(data, kerb == 0.5))
+?t.test
+t.test(subset(data, kerb == 0.5)$passing.distance)
+summary(subset(data, kerb == 0.5)$passing.distance)
+summary(subset(data, kerb == 0.5 & !helmet)$passing.distance)
+t.test(subset(data, kerb == 0.5 & !helmet)$passing.distance)
+mean(subset(data, kerb == 0.5 & !helmet)$passing.distance)
+sd(subset(data, kerb == 0.5 & !helmet)$passing.distance)
+length(subset(data, kerb == 0.5 & !helmet)$passing.distance)
+sd(subset(data, kerb == 0.5 & !helmet)$passing.distance) / sqrt(270)
+.4 / sqrt(270)
+pnorm(.5, mean=1.57, sd=.4)
+pnorm(.5, mean=1.69, sd=.4)
+.4 + 2 * .4 / sqrt(2 * 270)
+.4 - 2 * .4 / sqrt(2 * 270)
+.4 / sqrt(2 * 270)
+.95^2
+pnorm(.5, 1.69, .36)
+pnorm(.5, 1.57, .44)
+1/pnorm(.5, 1.69, .36)
+1/pnorm(.5, 1.57, .44)
+1/125
+qchisq(.025, 269)
+qchisq(.975, 269)
+269/qchisq(.975, 269)
+1 - 269/qchisq(.975, 269)
+269/qchisq(.975, 269)
+1 + 1/sqrt(2 * 270)
+1 + 2/sqrt(2 * 270)
+1 - 2/sqrt(2 * 270)
+n <- 1000
+n / qchisq(.975, n)
+sqrt(n / qchisq(.975, n))
+1 - 2/sqrt(n)
+1 + 2/sqrt(n)
+sqrt(n / qchisq(.025, n))
+1 + 2/sqrt(2*n)
+1 - 2/sqrt(2*n)
+n <- 269
+sqrt(n / qchisq(.025, n))
+sqrt(n / qchisq(.025, n)) * .4
+sqrt(n / qchisq(.975, n)) * .4
+mean(subset(data, kerb == 0.5 & !helmet)$passing.distance)
+mean(subset(data, kerb == 0.5 & helmet)$passing.distance)
+length(subset(data, kerb == 0.5 & helmet)$passing.distance)
+sd(subset(data, kerb == 0.5 & helmet)$passing.distance)
+mean(subset(data, kerb == 0.5 & !helmet)$passing.distance)
+1.55 - 1.63
+sqrt(.37^2 / 275 + .40^2 / 270)
+t.test(subset(data, kerb == 0.5 & !helmet)$passing.distance, subset(data, kerb== 0.5 & helmet)$passing.distance)
+-.08 + 2 * .33
+-.08 + 2 * .033
+-.08 - 2 * .033
+-.08/.033
+?t.test
+t.test(passing.distance ~ helmet, data = data, subset= kerb == 0.5)
+pt(-2.42, 537.001)
+2 * pt(-2.42, 537.001)
+dpois(c(4, 7, 0), c(.5, 12, .9), log=TRUE)
+sum(dpois(c(4, 7, 0), c(.5, 12, .9), log=TRUE))
+sum(dpois(c(4, 7, 0), c(.5, 12, .9), log=TRUE)) - sum(dpois(c(4, 7, 0), c(1, 9, 1), log=TRUE))
+exp(sum(dpois(c(4, 7, 0), c(.5, 12, .9), log=TRUE)) - sum(dpois(c(4, 7, 0), c(1, 9, 1), log=TRUE)))
+q()
