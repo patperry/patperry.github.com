@@ -129,11 +129,6 @@ nav {
     font-size: 1.1875em; /* 19px */
 }
 
-/*#container > .header-container > header {
-    font-size: 1.25em; *//* 20px *//*
-    line-height: 1.1; *//* 22 / 20 *//*
-}*/
-
 nav ul {
     display: -webkit-flex;
     display: flex;
@@ -153,29 +148,13 @@ nav li {
     text-align: center;
 }
 
-nav a {
-    text-decoration: none;
-    /* font-weight: bold; */
-    /* color: black; */
-    /* background: #e44d26; */
-}
-
-nav a:hover,
-nav a:visited {
-    /* color: white; */
-}
-
-nav a:hover {
-    text-decoration: underline;
-}
-
 .home    nav .home    a,
 .reports nav .reports a,
 .code    nav .code    a,
 .blog    nav .blog    a {
     cursor: default;
-    /* background: #e44d26; */
     font-weight: bold;
+    text-decoration: none;
 }
 
 /* ======
@@ -186,8 +165,8 @@ nav a:hover {
     display: -webkit-flex;
     display: flex;
 
-    -webkit-flex-flow: row wrap;
-            flex-flow: row wrap;
+    -webkit-flex-wrap: wrap;
+            flex-wrap: wrap;
     -webkit-justify-content: space-between;
             justify-content: space-between;
 
@@ -197,6 +176,7 @@ nav a:hover {
 .about img {
     width: 320px;
     height: 240px;
+    min-width: 320px;
     margin-right: 44px;
 }
 
@@ -281,7 +261,6 @@ article p + p {
 
 pre {
     overflow: visible;
-    font-family: inherit;
 }
 
 table {
