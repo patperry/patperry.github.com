@@ -169,12 +169,12 @@ h6 {
   margin: 2em 0; /* 22/11 */
 }
 
-h1 + p,
-h2 + p,
-h3 + p,
-h4 + p,
-h5 + p,
-h6 + p {
+h1 + dl, h1 + ol, h1 + p, h1 + pre, h1 + ul,
+h2 + dl, h2 + ol, h2 + p, h2 + pre, h2 + ul,
+h3 + dl, h3 + ol, h3 + p, h3 + pre, h3 + ul,
+h4 + dl, h4 + ol, h4 + p, h4 + pre, h4 + ul,
+h5 + dl, h5 + ol, h5 + p, h5 + pre, h5 + ul,
+h6 + dl, h6 + ol, h6 + p, h6 + pre, h6 + ul {
   margin-top: 0;
 }
 
