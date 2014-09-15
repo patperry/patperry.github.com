@@ -234,6 +234,79 @@ nav li {
     margin: 0 0 1.375em 2.75em;
 }
 
+/* =========
+    Rscript
+   ========= */
+
+.rscript code .operator,
+.rscript code .paren {
+  color: rgb(104, 118, 135)
+}
+
+.rscript code .literal {
+  color: #990073
+}
+
+.rscript code .number {
+  color: #099;
+}
+
+.rscript code .comment {
+  color: #998;
+  font-style: italic
+}
+
+.rscript code .keyword {
+  color: #900;
+  font-weight: bold
+}
+
+.rscript code .identifier {
+  color: rgb(0, 0, 0);
+}
+
+.rscript code .string {
+  color: #d14;
+}
+
+.rscript pre {
+  margin-left: 1.375em;
+}
+
+.rscript pre code {
+  display: block;
+  padding: 6px 22px;
+  margin-top: -6px;
+  margin-bottom: -6px;
+}
+
+.rscript pre samp {
+  display: block;
+  padding: 6px 7.2px;
+  margin-top: -6px;
+  margin-bottom: -6px;
+}
+
+.rscript pre code {
+  border: 1px solid #ccc;
+  padding: 5px 0 5px 21px;
+}
+
+.rscript pre + pre {
+  margin-top: -22px;
+}
+
+.rscript article {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/*.rscript figure {
+    margin-top: -22px;
+    margin-bottom: -16px
+}
+*/
+
 
 /* ==============
    Custom styles
@@ -261,7 +334,7 @@ h1 {
 }
 
 article {
-    max-width: 35.0em; /* 1 */
+    max-width: 600px; /* 1 */
     text-align: justify;
 }
 
