@@ -84,13 +84,13 @@ In the last section, when we ran the command
 `data` and value equal to the contents of the chosen file.
 
 
-To create a variable or to assign a new value to an existing 
+To create a variable or to assign a new value to an existing
 variable, use the assignment command (`<-`),  which is meant to
 look like an arrow pointing from the value to the variable name.
 For example, the command
 
 <pre><code class="prettyprint">a &lt;- 2.7</code></pre>
-means "assign the value `2.7` to the variable named `a`".  
+means "assign the value `2.7` to the variable named `a`".
 Another way to read this is "variable `a` gets the value `2.7`".
 
 
@@ -112,7 +112,7 @@ the value:
 
 <pre><samp>[1] 13.5
 </samp></pre>
-You can see the value of a variable, by typing its name and 
+You can see the value of a variable, by typing its name and
 pressing enter:
 
 <pre><code class="prettyprint">a</code></pre>
@@ -123,15 +123,15 @@ pressing enter:
 </samp></pre>
 
 
-An alternative way to read in a file to the variable named `data` 
+An alternative way to read in a file to the variable named `data`
 is to run the following sequence of commands:
 
 <pre><code class="prettyprint">filename &lt;- file.choose()
 data &lt;- read.csv(filename)</code></pre>
-The first command asks the user to choose a file, and stores the 
-resulting name in the `filename` variable.  This variable contains 
-the name of the file, but not the actual contents.  The second 
-command takes the name of the file, opens it, reads the contents 
+The first command asks the user to choose a file, and stores the
+resulting name in the `filename` variable.  This variable contains
+the name of the file, but not the actual contents.  The second
+command takes the name of the file, opens it, reads the contents
 into memory, and stores the result in the `data` variable.
 
 
@@ -312,7 +312,8 @@ this is that R doesn't have the concept of a "single value" or
 "scalar".  The only way to represent the value of `x[[1]]` is
 as a length-one vector.  The output
 
-    [1] 2.114
+<pre><samp>[1] 2.114
+</samp></pre>
 
 denotes a vector with a single value (`2.114`), stored at
 index `1`.
@@ -438,7 +439,7 @@ stored in a vector:
 <figure class="rimage default"><img src="figure/unnamed-chunk-22.png" title="plot of chunk unnamed-chunk-22" alt="plot of chunk unnamed-chunk-22" class="plot" /></figure>
 
 
-By default, the output looks fine when printed in black and white, 
+By default, the output looks fine when printed in black and white,
 but it isn't very pretty.  We can specify the bin color, change the axis
 labels, and omit the main title by passing additional arguments to this
 `hist` function
