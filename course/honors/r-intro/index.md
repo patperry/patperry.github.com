@@ -1,5 +1,6 @@
 ---
 layout: rscript
+title: Introduction to R
 ---
 
 Introduction to R
