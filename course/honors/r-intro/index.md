@@ -57,7 +57,7 @@ from RStudio's **Session** menu.
 
 
 Suppose that I want to open a file named "bikedata.csv", which is
-stored in the "~/Datasets" directory on my system.  Ifirst set the
+stored in the "~/Datasets" directory on my system.  I first set the
 working directory to "~/Datasets" by Choosing
 **Session** > *Set Working Directory* > *Choose Directory ...*.
 This will execute the command
