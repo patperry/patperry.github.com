@@ -69,7 +69,7 @@ nav, h1, h2, h3, h4, h5, h6 {
 
 .wrapper {
     width: 90%;
-    margin: 33px 5% 44px;
+    margin: 0 5%;
 }
 
 /* =======
@@ -300,6 +300,7 @@ nav li {
     margin-left: auto;
     margin-right: auto;
     width: 600px;
+    padding: 0 22px;
 }
 
 /*.rscript figure {
@@ -371,7 +372,7 @@ table {
 
     .wrapper {
         width: 864px; /* 960px - 10% for margins */
-        margin: 33px auto 44px;
+        margin: 0 auto;
     }
 }
 
