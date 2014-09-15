@@ -299,6 +299,7 @@ nav li {
 .rscript article {
     margin-left: auto;
     margin-right: auto;
+    width: 600px;
 }
 
 /*.rscript figure {
