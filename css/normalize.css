@@ -194,6 +194,10 @@ ol ul, ul ol, ul ul, ol ol {
   margin: 0;
 }
 
+ol dl, dl ol, ul dl, dl ul, dl dl {
+  margin: 0;
+}
+
 /**
  * Address styling not present in IE 8/9.
  */
