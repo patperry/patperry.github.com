@@ -1,0 +1,15 @@
+1. median
+2. no
+3a. 0.8306
+3b. 1.8306
+3c. average number of taxi’s needed if you had many nights with the same circumstances
+4. A
+5. B
+6. D
+7. D
+8. A
+9. B
+10a. B
+10b. E
+11. A
+12. C
