@@ -12,8 +12,8 @@ Fit a linear regression model with response variable
 and `kerb`.  This includes an intercept by default.
 
 <pre><code class="prettyprint">bikedata &lt;- read.csv(&quot;bikedata.csv&quot;)
-model &lt;- lm(sqrt(passing.distance) ~ helmet + vehicle + kerb, data = bikedata)</code></pre>
-
+model &lt;- lm(sqrt(passing.distance) ~ helmet + vehicle + kerb,
+            data = bikedata)</code></pre>
 
 
 Get the coefficient estimates, their standard errors, t statistics,
@@ -51,33 +51,23 @@ Multiple R-squared:  0.0906,	Adjusted R-squared:  0.0875
 F-statistic: 29.2 on 8 and 2346 DF,  p-value: &lt;2e-16
 </samp></pre>
 
-
 Check regression assumptions with diagnostic plots.
 
 <pre><code class="prettyprint">plot(model)</code></pre>
 
 <figure class="rimage default"><img src="figure/unnamed-chunk-31.png" title="plot of chunk unnamed-chunk-3" alt="plot of chunk unnamed-chunk-3" class="plot" /></figure><figure class="rimage default"><img src="figure/unnamed-chunk-32.png" title="plot of chunk unnamed-chunk-3" alt="plot of chunk unnamed-chunk-3" class="plot" /></figure><figure class="rimage default"><img src="figure/unnamed-chunk-33.png" title="plot of chunk unnamed-chunk-3" alt="plot of chunk unnamed-chunk-3" class="plot" /></figure><figure class="rimage default"><img src="figure/unnamed-chunk-34.png" title="plot of chunk unnamed-chunk-3" alt="plot of chunk unnamed-chunk-3" class="plot" /></figure>
 
-
 Scatter plot of standardized residuals versus `kerb`.
 
-<pre><code class="prettyprint">plot(data$kerb, rstandard(model))</code></pre>
+<pre><code class="prettyprint">plot(bikedata$kerb, rstandard(model))</code></pre>
 
-
-
-<pre><samp>Error: object of type 'closure' is not subsettable
-</samp></pre>
-
+<figure class="rimage default"><img src="figure/unnamed-chunk-4.png" title="plot of chunk unnamed-chunk-4" alt="plot of chunk unnamed-chunk-4" class="plot" /></figure>
 
 Boxplots of standardized residuals versus `helmet`
 
-<pre><code class="prettyprint">boxplot(rstandard(model) ~ data$helmet)</code></pre>
+<pre><code class="prettyprint">boxplot(rstandard(model) ~ bikedata$helmet)</code></pre>
 
-
-
-<pre><samp>Error: object of type 'closure' is not subsettable
-</samp></pre>
-
+<figure class="rimage default"><img src="figure/unnamed-chunk-5.png" title="plot of chunk unnamed-chunk-5" alt="plot of chunk unnamed-chunk-5" class="plot" /></figure>
 
 99% confidence interval for coefficient of `helmetY`.
 
@@ -88,5 +78,4 @@ Boxplots of standardized residuals versus `helmet`
 <pre><samp>           0.5 %    99.5 %
 helmetY -0.03809 -0.007009
 </samp></pre>
-
 
