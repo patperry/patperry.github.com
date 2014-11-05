@@ -1,0 +1,13 @@
+1a. (34.87, 38.25)
+2a. H0: mean difference is 0; Ha; mean difference is not 0
+2b; 2.47
+2c; 0.0136
+3. A
+4. A
+5. B
+6. C
+7a. B
+7b. C
+8. C
+9. C
+10. A
