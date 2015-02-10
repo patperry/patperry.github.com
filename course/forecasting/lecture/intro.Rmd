@@ -1,0 +1,338 @@
+---
+title: Forecasting Time Series
+subtitle: Introduction
+author: Patrick Perry 
+date: February 10, 2015
+output:
+  ioslides_presentation:
+    transition: faster
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("e1071")           # kurtosis
+library("knitr")           # opts_chunk
+
+# utility functions
+source("http://ptrckprry.com/course/forecasting/code/ad.test.R")
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# code chunk options
+#opts_chunk$set(fig.width=12, fig.height=8, fig.align="center", echo=FALSE, tidy=FALSE)
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=FALSE, tidy=FALSE)
+```
+
+Dow Jones Industrial Average
+----------------------------
+
+```{r}
+# download the data and extract the relevant columns
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/dow.csv")
+date <- as.Date(data$date)
+dow <- data$dow
+```
+
+```{r}
+# Set up the plot axes, but don't actually plot the data (type = "n")
+plot(date, dow, type="n", xlab="Date", ylab="Dow")
+
+# Add axis ticks above and below plot
+#   side: 1 = bottom, 2 = left, 3 = top, 4 = right
+#   lwd, lwd.ticks: line width of the axis line and ticks
+#   labels: put labels at tick marks?
+Axis(date, side=3, lwd=0, lwd.ticks=1, labels=FALSE) 
+Axis(date, side=4, lwd=0, lwd.ticks=1, labels=FALSE)
+
+# Add horizontal guide lines
+usr <- par("usr") # get the plot limits in "user" coordinates (xmin, xmax, ymin, ymax)
+abline(h=seq(usr[3], usr[4], length.out=5)[2:4], col="gray")
+
+# Now, add the data.  We do this *after* the guide lines so that the data ends up on top
+lines(date, dow, col=2)
+```
+
+
+Log(Dow)
+--------
+
+```{r}
+# encapsulate the plotting commands into a function so that we don't have to repeat ourselves
+fancy.plot <- function(x, y, hguide=0, vguide=0, type = "p", col = "black", pch = 1, cex = 1, ...) {
+    # set up plot region
+    plot(x, y, type="n", axes=FALSE, ...)
+    
+    # add axes
+    Axis(x, side=1, lwd=0, lwd.ticks=1, labels=TRUE)
+    Axis(y, side=2, lwd=0, lwd.ticks=1, labels=TRUE)
+    Axis(x, side=3, lwd=0, lwd.ticks=1, labels=FALSE)
+    Axis(y, side=4, lwd=0, lwd.ticks=1, labels=FALSE)
+    
+    # add horizontal guide lines
+    usr <- par("usr")
+    if (hguide > 0) {
+        abline(h=seq(usr[3], usr[4], length.out=hguide+2)[-c(1,hguide+2)], col="gray")
+    }
+    if (vguide > 0) {
+        abline(v=seq(usr[1], usr[2], length.out=vguide+2)[-c(1,vguide+2)], col="gray")
+    }
+
+    # add the data
+    if (type == "l") {
+        lines(x, y, col=col)
+    } else if (type == "p") {
+        points(x, y, cex=cex, pch=pch, col=col)
+    }
+    
+    # add frame
+    box()
+}
+```
+
+```{r}
+log.dow <- log(dow)
+fancy.plot(date, log.dow, type="l", col=2, xlab="Date", ylab="Log(Dow)", hguide=3)
+```
+
+Take logs to adjust for exponential growth and level-dependent volatility.
+
+
+Stylized Fact #1 {.flexbox .vcenter}
+----------------
+
+Many datasets exhibit exponential growth and level-dependent volatility.
+
+
+Regress Log(Dow) on Time
+------------------------
+
+```{r}
+time <- 1:length(date)
+model.time <- lm(log.dow ~ time)
+summary(model.time)
+```
+
+
+Log(Dow) vs. Time, with Fit
+---------------------------
+
+```{r}
+fancy.plot(time, log.dow, type="l", col=2, xlab="Time", ylab="Log(Dow)", hguide=3)
+abline(model.time, col=1, lty=2)
+```
+
+
+Today's vs. Yesterday's Log(Dow)
+--------------------------------
+
+```{r}
+lag1.log.dow <- c(NA, log.dow[-length(log.dow)])
+fancy.plot(lag1.log.dow, log.dow, cex=0.5, col=2, xlab="Yesterday's Log(Dow)", ylab="Today's Log(Dow)", asp=1)
+```
+
+Regress Today on Yesterday
+--------------------------
+
+```{r}
+model.yest <- lm(log.dow ~ lag1.log.dow)
+print(summary(model.yest), digits=6)
+```
+
+
+Slope significantly different from 1?
+-------------------------------------
+
+```{r}
+s <- summary(model.yest)
+print(s$coef)
+```
+
+T statistic:
+```{r}
+est <- s$coef["lag1.log.dow", "Estimate"]
+se <- s$coef["lag1.log.dow", "Std. Error"]
+tstat <- (est - 1) / se
+print(tstat)
+```
+
+95% Confidence Interval:
+```{r}
+print(confint(model.yest, "lag1.log.dow"), digits=6)
+```
+  
+We probably shouldn't trust these results.  (Why?)
+
+
+Stylized Fact #2 {.flexbox .vcenter}
+----------------
+
+Nearby observations are highly correlated with each other.
+
+
+
+Log(Dow) vs. Time (again)
+-------------------------
+
+```{r}
+fancy.plot(date, log.dow, type="l", col=2, xlab="Date", ylab="Log(Dow)", hguide=3)
+```
+
+
+Histogram of Log(Dow)
+---------------------
+
+```{r}
+hist(log.dow, breaks=50, col=2, xlab="Log(Dow)", main="")
+```
+
+Problem: the series is not ergodic; this histogram tells us nothing about the
+generative process.
+
+
+
+
+Return: Today's - Yesterday's Log(Dow)
+--------------------------------------
+
+```{r}
+ret.dow <- log.dow - lag1.log.dow
+fancy.plot(date, ret.dow, t="l", xlab="Date", ylab="Return", col=2)
+```
+
+
+Predicting Returns
+------------------
+
+```{r}
+lag1.ret.dow <- c(NA, ret.dow[-length(ret.dow)])
+fancy.plot(lag1.ret.dow, ret.dow, col=2, cex=0.5, xlab="Yesterday's Return", ylab="Today's Return", asp=1)
+```
+
+
+Regress Today's on Yesterday's Return
+-------------------------------------
+
+```{r}
+model.ret <- lm(ret.dow ~ lag1.ret.dow)
+summary(model.ret)
+```
+
+
+
+Stylized Fact #2 (cont.) {.flexbox .vcenter}
+------------------------
+
+Nearby observations are highly correlated with each other.  Differences are
+mean-reverting.
+
+
+
+Histogram of Returns
+--------------------
+```{r}
+hist(ret.dow, breaks=100, col=2, xlab="Return", main="")
+```
+
+
+Normal Probability Plot of Returns
+----------------------------------
+
+```{r}
+qqnorm(ret.dow, col=2, cex=0.5, main="", xlab="Unit Normal Quantile", ylab="Return")
+qqline(ret.dow, col=1, lty=2)
+axis(3, labels=FALSE)
+axis(4, labels=FALSE)
+```
+
+
+Kurtosis, AD Test of Returns
+----------------------------
+```{r, echo=TRUE}
+kurtosis(ret.dow, na.rm=TRUE) # excess kurtosis, 0 for Gaussian
+ad.test(ret.dow)
+```
+
+
+Stylized Fact #3 {.flexbox .vcenter}
+----------------
+
+Returns exhibit leptokurtosis (heavy tails).
+
+
+Return vs. Time (again)
+-----------------------
+```{r}
+fancy.plot(date, ret.dow, t="l", xlab="Date", ylab="Return", col=2)
+```
+
+Persistent volatility?
+
+Volatility (Squared Return)
+---------------------------
+```{r}
+fancy.plot(date, (ret.dow)^2, t="l", xlab="Date", ylab="Sq. Return", col=2)
+```
+
+Volatility (Absolute Return)
+----------------------------
+```{r}
+fancy.plot(date, abs(ret.dow), t="l", xlab="Date", ylab="Abs. Return", col=2)
+```
+
+
+Today's vs. Yesterday's Abs. Return
+-----------------------------------
+```{r}
+abs.ret.dow <- abs(ret.dow)
+lag1.abs.ret.dow <- c(NA, abs.ret.dow[-length(abs.ret.dow)])
+fancy.plot(lag1.abs.ret.dow, abs.ret.dow, cex=0.5, col=2, asp=1,
+           xlab="Yesterday's Abs. Return", ylab="Today's Abs. Return")
+
+model.abs.ret <- lm(abs.ret.dow ~ lag1.abs.ret.dow)
+abline(model.abs.ret, col=1, lty=2)
+```
+
+
+---
+```{r}
+summary(model.abs.ret)
+```
+
+
+Stylized Fact #4 {.flexbox .vcenter}
+----------------
+
+Volatility is persistent.
+
+---
+
+
+```{r, fig.height=6}
+lag1.dow <- c(NA, dow[-length(dow)])
+diff.dow <- dow - lag1.dow
+diff.log.dow <- log.dow - lag1.log.dow
+par(mfrow=c(2,2))
+fancy.plot(date, dow, type="l", col=2, xlab="Date", ylab="Dow")
+fancy.plot(date, log.dow, type="l", col=2, xlab="Date", ylab="Log Dow")
+fancy.plot(date, diff.dow, type="l", col=2, xlab="Date", ylab="Diff. Dow")
+fancy.plot(date, diff.log.dow, type="l", col=2, xlab="Date", ylab="Diff. Log Dow")
+```
+
+
+Stylized Facts
+--------------
+
+1. Many datasets exhibit exponential growth and level-dependent volatility.
+
+2. Nearby observations are correlated with each other.
+
+3. Returns exhibit leptokurtosis.
+
+4. Volatility is persistent.
+
+
+
