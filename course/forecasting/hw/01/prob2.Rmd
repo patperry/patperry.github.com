@@ -1,0 +1,77 @@
+---
+title: 'HW1: Problem 2'
+author: (Your name goes here)
+output: html_document
+---
+
+In this problem we will consider the daily U.S. Dollar-Euro exchange rate,
+daily, 4 Jan 1999 to 27 Jan 2015 (*n* = 4115).
+
+```{r}
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/euro.csv")
+date <- as.Date(data$date)
+euro <- data$euro
+```
+
+
+Part A
+------
+
+Here is a time-series plot of Euro.
+
+```{r}
+# Replace this comment with code to make the plot.
+```
+
+
+**Does a straight-line model seem appropriate?**
+
+
+
+Part B
+------
+
+Here, we fit two models and predict the value at 28 Jan 2015 (time = 4116).  In
+the first model, we fit to observations 1 to 700.  In the second model, we fit to observations 701 to 4115.
+
+```{r}
+time <- 1:length(euro) # create the time variable
+
+# Replace the ???? in the following lines with the appropriate code, then
+# uncomment the code.  Make sure you use "time" as the predictor variable,
+# note "date".
+
+#model1 <- lm(????, subset=1:700)
+#summary(model1)
+
+#model2 <- lm(????, subset=701:4115)
+#summary(model2)
+```
+
+Here are the predicted values and 95% prediction intervals for the two models:
+```{r}
+newdata <- data.frame(time = 4116)
+# Add code to compute the two prediction intervals
+```
+
+**Did both of the forecast intervals succeed in containing the actual value
+for 28 Jan 2015?  If not, then use what you learned in Problem~1 to give a
+statistical explanation of what went wrong.**
+
+
+Part C
+------
+
+Here, we superimpose the fitted lines from both models on the time series plot.
+
+```{r}
+plot(time, euro, t="l")
+
+# Replace the ???? in the following two lines with code to add the two lines:
+#
+# abline(????, lty=2)
+# abline(????, lty=3)
+
+legend("bottomright", inset=0.05,
+       legend=c("Fit to 1-700", "Fit to 701-4115"), lty=c(2,3))
+```

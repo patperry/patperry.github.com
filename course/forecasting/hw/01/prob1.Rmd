@@ -1,0 +1,120 @@
+---
+title: 'HW1: Problem 1'
+author: (Your name goes here)
+output: html_document
+---
+
+In this problem we will investigate the United States Gross Domestic Product 
+(GDP).  The data file `gdp.csv` contians the real US GDP, quarterly, from 1946, 
+Q4 to 2014 Q2, seasonally adjusted and inflation adjusted, in billions of 2009 
+dollars.  
+
+
+
+Part A
+------
+
+We read the data file and extract the `date` and `gdp` columns with 
+the following commands:
+
+```{r}
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/gdp.csv")
+date <- as.Date(data$date)
+gdp <- data$gdp
+```
+
+Here is a plot of the GDP series versus date:
+
+```{r}
+# Replace this comment with code to make the plot.
+#
+# Hint: Use the plot command.
+```
+
+**Does GDP seem to grow linearly over time?**
+
+
+
+Part B
+------
+
+Here is a plot of log(GDP).
+
+```{r}
+log.gdp <- log(gdp) # create the log(GDP) variable
+
+# Replace this comment with the code to plot log(GDP) vs. Date
+```
+
+**Does log GDP appear to grow linearly over time?  If so, then what does this
+imply about the growth of GDP itself?**
+
+
+Part C
+------
+
+We fit an ordinary linear regression model for log(GDP), using time as the 
+predictor variable.
+
+```{r}
+time <- 1:length(gdp) # create the time variable
+
+# Replace this comment with code to fit a linear model and print the
+# fitted coefficients.
+#
+# Hint: Use the "lm" and "summary" commands; use log.gdp as your response
+# and use time as your predictor (*not* date).
+```
+
+Based on the fitted model, we forecast the log(GDP) for the third quarter
+of the year 2014 (time = 272).  
+
+```{r}
+# Replace with code to predict the value of gdp when time = 272
+#
+# Hint: use the "coef" or the "predict" function
+```
+
+We also construct a 95% prediction interval to go with the
+point forecast:
+
+```{r}
+# Replace with code to compute a 95% prediction interval
+#
+# Hint: use the "predict" function.
+```
+
+**Do you think this interval forecast (prediction interval) is valid?  Does it
+seem too wide, or too precise?  Explain.**
+
+
+Part D
+------
+
+Next is a plot of the log(GDP) series with the fitted line superimposed.
+
+```{r}
+plot(time, log.gdp, type="l")
+
+# Replace this comment with code to add a line to the plot.
+#
+# Hint: use the "abline" function.
+```
+
+**Does the line fit well?**
+
+
+Part E
+------
+
+Here is a plot the residuals from the fitted line versus time.
+
+```{r}
+# Replace with code to add the plot.
+#
+# Hint: use the "residuals" function.
+```
+
+**What potential problems with the linear model are indicated by this plot?
+Do you think these problems could spoil the validity of the forecast
+interval?**
