@@ -1,0 +1,220 @@
+---
+title: Forecasting Time Series
+subtitle: Autocorrelation
+author: Patrick Perry 
+date: February 24, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# set random number generator seed to ensure consistent runs
+set.seed(0)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+Hedge Fund Index
+----------------
+CISDM Equal Weighted Hedge Fund Index NAV, Monthly, 1990 - Present
+
+```{r}
+# Remove earlier time points
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/hedge.csv")
+data$date <- as.Date(data$date)
+data <- subset(data, date >= "1990-01-01")
+
+# Extract returns
+hedge <- data$return
+n <- length(hedge)
+time <- 1:n
+plot(time, hedge, type="l", col=1)
+```
+
+
+White Noise
+-----------
+
+```{r}
+wn <- rnorm(n)
+plot(time, wn, type="l", col=2)
+
+```
+
+
+MA(1)
+-----
+```{r}
+beta <- 0.25
+ma1 <- filter(wn, c(1, beta), method="convolution", sides=1)
+plot(time, ma1, type="l", col=3)
+```
+
+
+AR(1)
+-----
+```{r}
+alpha <- 0.3
+ar1 <- filter(wn, alpha, method="recursive")
+plot(time, ar1, type="l", col=4)
+```
+
+
+All Four Series
+---------------
+
+```{r}
+par(mfrow=c(2,2))
+plot(time, hedge, type="l", col=1)
+plot(time, wn, type="l", col=2)
+plot(time, ma1, type="l", col=3)
+plot(time, ar1, type="l", col=4)
+```
+
+
+Lagging
+-------
+
+```{r}
+lagpad <- function(x, k) {
+    c(rep(NA, k), x)[1:length(x)]
+}
+```
+
+Lag Plot for Hedge
+------------------
+```{r}
+plot(lagpad(hedge, 1), hedge, col=1, asp=1)
+abline(lm(hedge ~ lagpad(hedge, 1)), lty=2)
+```
+
+
+Lag Plots for All Four
+----------------------
+```{r}
+par(mfrow=c(2,2))
+
+plot(lagpad(hedge, 1), hedge, col=1, asp=1)
+abline(lm(hedge ~ lagpad(hedge, 1)), lty=2)
+
+plot(lagpad(wn, 1), wn, col=2, asp=1)
+abline(lm(wn ~ lagpad(wn, 1)), lty=2)
+
+plot(lagpad(ma1, 1), ma1, col=3, asp=1)
+abline(lm(ma1 ~ lagpad(ma1, 1)), lty=2)
+
+plot(lagpad(ar1, 1), ar1, col=4, asp=1)
+abline(lm(ar1 ~ lagpad(ar1, 1)), lty=2)
+```
+
+
+Lag-2 Plots for All Four
+------------------------
+```{r}
+par(mfrow=c(2,2))
+
+plot(lagpad(hedge, 2), hedge, col=1, asp=1)
+abline(lm(hedge ~ lagpad(hedge, 2)), lty=2)
+
+plot(lagpad(wn, 2), wn, col=2, asp=1)
+abline(lm(wn ~ lagpad(wn, 2)), lty=2)
+
+plot(lagpad(ma1, 2), ma1, col=3, asp=1)
+abline(lm(ma1 ~ lagpad(ma1, 2)), lty=2)
+
+plot(lagpad(ar1, 2), ar1, col=4, asp=1)
+abline(lm(ar1 ~ lagpad(ar1, 2)), lty=2)
+```
+
+
+Lag Plots for Hedge
+-------------------
+```{r}
+lag.plot <- function(x, lag, col) {
+    model <- lm(x ~ lagpad(x, lag))
+    rho <- cor(x, lagpad(x, lag), use="complete.obs")
+    plot(lagpad(x, lag), x, col=col, asp=1,
+         main = paste("cor =", round(rho, 2)))
+    abline(model, lty=2)
+}
+
+lag.plots <- function(x, col) {
+    par(mfrow=c(2,2))
+    lag.plot(x, 1, col)
+    lag.plot(x, 2, col)
+    lag.plot(x, 3, col)
+    lag.plot(x, 4, col)
+}
+
+lag.plots(hedge, col=1)
+```
+
+
+
+Lag Plots for White Noise
+-------------------------
+```{r}
+lag.plots(wn, col=2)
+```
+
+
+Lag Plots for MA(1)
+-------------------
+```{r}
+lag.plots(ma1, col=3)
+```
+
+
+Lag Plots for AR(1)
+-------------------
+```{r}
+lag.plots(ar1, col=4)
+```
+
+
+Autocorrelation function for Hedge
+----------------------------------
+```{r}
+library("forecast")
+Acf(hedge)
+```
+
+
+Autocorrelation function for White Noise
+----------------------------------------
+```{r}
+Acf(wn)
+```
+
+
+Autocorrelation function for MA(1)
+----------------------------------
+```{r}
+Acf(ma1)
+```
+
+
+Autocorrelation function for AR(1)
+----------------------------------
+```{r}
+Acf(ar1)
+```
+
+ACF for All Four
+----------------
+```{r}
+par(mfrow=c(2,2))
+Acf(hedge)
+Acf(wn)
+Acf(ma1)
+Acf(ar1)
+```
