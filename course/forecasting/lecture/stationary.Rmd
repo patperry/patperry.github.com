@@ -1,0 +1,97 @@
+---
+title: Forecasting Time Series
+subtitle: Simple Stationary Processes
+author: Patrick Perry 
+date: February 17, 2015
+output:
+  ioslides_presentation:
+    transition: faster
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# ensure consistent runs
+set.seed(0)
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+Simulating Gaussian White Noise
+-------------------------------
+
+```{r}
+n <- 1000; time <- 1:n
+eps <- rnorm(n)
+plot(time, eps, type="l", col=2)
+```
+
+Simulating an MA(1)
+-------------------
+
+```{r}
+beta <- 0.1
+x <- filter(eps, c(1, beta), method="convolution", sides=1)
+plot(time, x, type="l", col=2)
+```
+
+Simulating an AR(1)
+-------------------
+
+```{r}
+alpha <- 0.5
+x <- filter(eps, alpha, method="recursive")
+plot(time, x, type="l", col=2)
+```
+
+Random Walk (Non-Stationary)
+----------------------------
+
+```{r}
+alpha <- 1
+x <- filter(eps, alpha, method="recursive")
+plot(time, x, type="l", col=2)
+```
+
+
+Trading an MA(1)
+----------------
+
+```{r}
+eps <- rnorm(n); beta <- 0.2
+ret.today <- filter(eps, c(1, beta), method="convolution", sides=1)
+plot(time, ret.today, type="l", col=2)
+```
+
+Today vs. Yesterday
+-------------------
+
+```{r}
+ret.yesterday <- c(NA, ret.today[-length(ret.today)])
+plot(ret.yesterday, ret.today, col=2)
+abline(lm(ret.today ~ ret.yesterday), col=1, lty=2)
+```
+
+Today vs. Two Days Ago
+----------------------
+```{r}
+ret.lag2 <- c(NA, ret.yesterday[-length(ret.yesterday)])
+plot(ret.lag2, ret.today, col=2)
+abline(lm(ret.today ~ ret.lag2), col=1, lty=2)
+```
+
+Buy on Up Days
+--------------
+
+```{r}
+mean(ret.today[ret.yesterday > 0], na.rm=TRUE)
+```

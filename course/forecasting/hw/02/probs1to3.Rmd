@@ -1,0 +1,288 @@
+Homework 2: Problems 1--3
+=========================
+*Firstname LastName (Replace this part with your name)*
+
+
+---
+
+
+In Problems 1--3, we analyze the Russell 2000 Stock Index, adjusted daily
+closing price, recorded from 10 September 1987 to 11 February 2015.  
+
+```{r}
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/russell.csv")
+russell <- data$russell
+date <- as.Date(data$date)
+time <- 1:length(russell)
+```
+
+We will work with the mean-adjusted series:
+
+```{r}
+today <- russell - mean(russell)
+```
+
+
+Problem 1
+=========
+
+Part A
+------
+
+Here is a plot of Today's Russell versus time, as well as Yesterday's Russell
+versus time:
+
+```{r}
+# The following command creates a lagged version of the 'today' vector.
+# It works by dropping the last value of the today vector, and then
+# prepending a missing value ('NA'):
+#
+#     today      x1 x2 x3 x4
+#     yesterday  NA x1 x2 x3
+#
+# By construction, yesterday[t] is equal to today[t-1] for all t > 1.
+#
+# Note that a negative index value (-length(today), in this instance)
+# means "drop the element at this index".
+#
+yesterday <- c(NA, today[-length(today)])
+
+plot(date, today, xlab="Date", ylab="Mean-Adjusted Russell", type="l", lty=1)
+lines(date, yesterday, lty=3) # adds lines for yesterday to the existing plot
+
+legend("topleft", inset=0.05,
+       legend=c("Today", "Yesterday"), lty=c(1,3))
+```
+
+Next, here is a plot of Today's Russell versus time, as well as
+0.5 (Yesterday's Russell):
+
+
+```{r}
+## Replace this comment with code to make the plot
+```
+
+
+Part B
+------
+
+**Based on these two plots, which seems to be a better forecast of Today's
+Russell: Today's Russell, or 0.5 (Yesterday's Russell)?**
+
+
+
+Part C
+------
+
+Here are the average squared forecast errors for the two forecasts:
+
+```{r}
+# Replace this comment with code to compute average squared forecast
+# errors for the two forecasts (you will compute two numbers: one for
+# 'yesterday', and one for '0.5 yesterday').
+#
+# Hint: use the mean function.
+```
+
+**Based on this, which one was better?**
+
+
+
+
+Problem 2
+=========
+
+Part A
+------
+
+Here is a plot of Today's Russell versus Yesterday's Russell:
+
+```{r}
+# Add code to make the plot.  Put "Today's Russell" on the y-axis.
+```
+
+**Describe any patterns you see.**
+
+
+
+Part B
+------
+
+Here is a linear regression fit of Today's Russell on Yesterday's Russell:
+
+```{r}
+# Replace the ???? with code to fit the linear regression model, then
+# uncomment the following two lines.
+#
+# model <- ????
+# summary(model)
+```
+
+**What is the prediction of Today's Russell implied by the regression
+coefficients?**
+
+
+**Is this consistent with your answers to Problem 1, parts B and C?**
+
+
+
+Part C
+------
+
+The 95% confidence interval for the slope is
+```{r}
+# Add code to compute the confidence interval for the coefficient of
+# "yesterday".
+#
+# Hint: use the confint function.
+```
+
+**Is the slope in your fitted regression significantly different from 1?**
+
+
+The 95% confidence interval for the intercept is
+```{r}
+# Add code to compute the confidence interval for the intercept.
+# Hint: use the confint function
+```
+
+**Briefly comment on the intercept as well.**
+
+
+Part D
+------
+**Based on everything you have done so far, do you see any strong evidence
+that the Russell is *not* a random walk**?
+
+
+
+Part E
+------
+Here is the correlation coefficient between Today's Russell and Yesterday's
+Russell:
+
+```{r}
+# There are two ways to do this in R:  
+#
+# 1. You can get the R^2 with the command `summary(model)$r.squared`,
+#    then take the square root, and then multiply by the sign of the
+#    coefficient, `sign(coef(model)[["yesterday"]])`.
+#
+# 2. You can use the `cor` function.
+# 
+# Choose either method and compute the value here.
+```
+
+
+**Based on this, how strong is the linear association between Today's Russell
+and Yesterday's Russell?**
+
+
+
+Problem 3
+=========
+
+Part A
+------
+
+We define the Russell returns as
+```{r}
+# Replace the ???? with code to compute the Russell returns, then
+# uncomment the following two lines:
+# ret.today <- ????
+# ret.yesterday <- c(NA, ret.today[-length(ret.today)])
+```
+
+
+Here is a plot of Today's return versus time:
+```{r}
+# Add the plot here.
+```
+
+
+Here are the sample average and standard deviation of the returns:
+```{r}
+# Hint: use the mean and sd functions.
+```
+
+
+Here is an ordinary t-test of whether the mean returns are zero:
+```{r}
+# Replace this comment with code to perform a t-test on the data
+# stored in `ret.today`.
+#
+# Hint: use the t.test function.
+```
+
+**Are the mean returns significantly different from zero?  Interpret your
+findings.**
+
+
+
+Part B
+------
+
+Here is a histogram of the Russell returns:
+```{r}
+# Add code to make the histogram.
+#
+# Hint: use the hist command.
+```
+
+Here is a boxplot:
+```{r}
+# Add code to make the boxplot.
+#
+# Hint: use the boxplot command.
+```
+
+Finally, here is a normal quantile-quantile plot:
+```{r}
+# Add code to make the normal quantile-quantile plot.
+# 
+# Hint: use the qqnorm command.
+```
+
+**Do you think that the Russell returns are normally distributed?  Explain.**
+
+
+
+Part C
+------
+
+Here is a plot of today's return versus yesterday's return
+```{r}
+# Add code to make the plot.
+```
+
+Here is a zoomed in plot:
+```{r}
+# Due to the extreme values, there is not much information in the
+# plot above.  You can zoom in on the plot by adding xlim and
+# ylim arguments, as in plot(x, y, xlim=c(1, 3), ylim=c(-2,2)); this would
+# sets the x limits to [1,3] and sets the y limits to [-2,2].
+
+# Replace this comment by taking the previous plot command and then
+# adding appropriate values for xlim and ylim.
+```
+
+
+**Does this plot appear very different from the one in Problem 2(A)?  Which
+seems to be easier to predict: Today's Russell, or Today's return?**
+
+
+
+Part D
+------
+
+Here is a linear regression of today's returns on yesterday's returns:
+```{r}
+# Add code to fit the model and print a summary of the fit.
+```
+
+**What is the prediction of today's return implied by the regression
+coefficients?**
+
+
+**Are the coefficients statistically significantly different from zero?**
+
