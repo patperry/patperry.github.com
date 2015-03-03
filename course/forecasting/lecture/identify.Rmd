@@ -1,0 +1,178 @@
+---
+title: Forecasting Time Series
+subtitle: Model Identification with ACF, PACF
+author: Patrick Perry 
+date: March 3, 2015
+output:
+  ioslides_presentation:
+    transition: faster
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# consistent output
+set.seed(0)
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+Forecast Library
+----------------
+
+To compute an ACF or PACF, use the `forecast` package.
+
+Install via *Tools > Install Packages...* menu.
+```{r}
+library("forecast")
+```
+
+
+ACF for White Noise
+-------------------
+
+```{r}
+n <- 10000; time <- 1:n
+wn <- rt(n, df=3)
+Acf(wn)
+```
+
+ACF for MA(1) and MA(2)
+-----------------------
+
+```{r}
+ma1 <- filter(wn, c(1, 0.25), method="convolution", sides=1)
+ma2 <- filter(wn, c(1, 0.1, 0.25), method="convolution", sides=1)
+par(mfrow=c(1,2))
+Acf(ma1); Acf(ma2)
+```
+
+ACF for AR(1) and AR(2)
+-----------------------
+
+```{r}
+ar1 <- filter(wn, 0.5, method="recursive")
+ar2 <- filter(wn, c(0.4, -0.2), method="recursive")
+par(mfrow=c(1,2))
+Acf(ar1); Acf(ar2)
+```
+
+
+PACF for White Noise
+--------------------
+
+```{r}
+Pacf(wn)
+```
+
+
+PACF for AR(1) and AR(2)
+------------------------
+
+```{r}
+par(mfrow=c(1,2))
+Pacf(ar1)
+Pacf(ar2)
+```
+
+
+PACF for MA(1) and MA(2)
+------------------------
+
+```{r}
+par(mfrow=c(1,2))
+Pacf(ma1)
+Pacf(ma2)
+```
+
+
+Over-Differencing
+-----------------
+
+```{r}
+par(mfrow=c(1,2))
+Acf(wn); Acf(diff(wn))
+```
+
+
+Case Study: Amazon (AMZN)
+-------------------------
+
+```{r}
+# Amazon.com Stock Price, Daily, May 16, 1997 - Present
+# Adjusted Closing Price.
+# Source: http://finance.yahoo.com/q?s=amzn
+url <- "http://ptrckprry.com/course/forecasting/data/amazon.csv"
+data <- read.csv(url)
+date <- as.Date(data$date)
+time <- 1:length(date)
+AMZN <- data$amazon
+```
+
+AMZN Series
+-----------
+```{r}
+plot(date, AMZN, type="l", col=2)
+```
+
+
+Log AMZN
+--------
+```{r}
+log.AMZN <- log(AMZN)
+plot(date, log.AMZN, type="l", col=2)
+```
+
+ACF, PACF of Log AMZN
+---------------
+
+```{r}
+par(mfrow=c(1,2))
+Acf(log.AMZN, lag.max=100)
+Pacf(log.AMZN, lag.max=100)
+```
+
+
+Diff. Log AMZN
+--------------
+
+```{r}
+diff.log.AMZN <- c(NA, diff(log.AMZN))
+plot(date, diff.log.AMZN, type="l", col=2)
+```
+
+ACF, PACF for Diff. Log AMZN
+----------------------------
+
+```{r}
+par(mfrow=c(1,2))
+Acf(diff.log.AMZN)
+Pacf(diff.log.AMZN)
+```
+
+Diff. 2 Log AMZN
+----------------
+
+```{r}
+diff2.log.AMZN <- c(NA, diff(diff.log.AMZN))
+plot(date, diff2.log.AMZN, type="l", col=2)
+```
+
+ACF, PACF for Diff. 2 Log AMZN
+------------------------------
+
+```{r}
+par(mfrow=c(1,2))
+Acf(diff2.log.AMZN)
+Pacf(diff2.log.AMZN)
+```
+

@@ -1,0 +1,102 @@
+---
+title: Forecasting Time Series
+subtitle: Stationary and Nonstationary AR Models
+author: Patrick Perry 
+date: March 3, 2015
+output:
+  ioslides_presentation:
+    transition: faster
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# consistent output
+set.seed(0)
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+White Noise
+-----------
+
+```{r}
+n <- 1000; time <- 1:n
+eps <- rt(n, df=3) # t with 3 degrees of freedom (heavy-tailed)
+plot(time, eps, type="l", col=2)
+```
+
+AR(1), a = 0.5 
+--------------
+
+```{r}
+x <- filter(eps, 0.5, method="recursive")
+plot(time, x, type="l", col=2)
+```
+
+AR(1), a = -0.5 
+---------------
+
+```{r}
+x <- filter(eps, -0.5, method="recursive")
+plot(time, x, type="l", col=2)
+```
+
+
+AR(1), a = 1
+------------
+
+```{r}
+x <- filter(eps, 1, method="recursive")
+plot(time, x, type="l", col=2)
+```
+
+
+AR(1), a = -1
+-------------
+
+```{r}
+x <- filter(eps, -1, method="recursive")
+plot(time, x, type="l", col=2)
+```
+
+AR(1), a = 1.1
+--------------
+
+```{r}
+x <- filter(eps, 1.1, method="recursive")
+plot(time, x, type="l", col=2)
+```
+
+AR(1), a = -1.1
+---------------
+
+```{r}
+x <- filter(eps, -1.1, method="recursive")
+plot(time, x, type="l", col=2)
+```
+
+AR(2), a1 = 0.4, a2 = -0.2
+--------------------------
+
+```{r}
+x <- filter(eps, c(0.4, -0.2), method="recursive")
+plot(time, x, type="l", col=2) # stationary?
+```
+
+AR(2), a1 = 0.5, a2 = 0.5
+-------------------------
+
+```{r}
+x <- filter(eps, c(0.5, 0.5), method="recursive")
+plot(time, x, type="l", col=2) # stationary?
+```
