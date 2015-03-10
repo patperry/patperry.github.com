@@ -142,3 +142,44 @@ Forecasts From Selected Model
 plot(forecast(fit, h=30, level=95), col=2)
 ```
 
+
+Model Without Constant
+----------------------
+
+```{r}
+fit.nc <- Arima(housing.starts, c(1, 0, 2), include.constant=FALSE)
+print(fit.nc)
+```
+
+
+Residuals (Model Without Constant)
+----------------------------------
+
+```{r}
+resid.nc <- residuals(fit.nc)
+plot(date, resid.nc, type="l", col=2)
+Acf(resid.nc)
+Pacf(resid.nc)
+```
+
+
+Ljung-Box Goodness-of-Fit Test (Model Without Constant)
+-------------------------------------------------------
+
+```{r}
+# fitdf = 3 (p = 1, q = 2, no constant)
+Box.test(resid.nc, lag=12, type = "Ljung-Box", fitdf=3)
+Box.test(resid.nc, lag=24, type = "Ljung-Box", fitdf=3)
+Box.test(resid.nc, lag=36, type = "Ljung-Box", fitdf=3)
+Box.test(resid.nc, lag=48, type = "Ljung-Box", fitdf=3)
+```
+
+
+
+Forecasts From Model Without Constant
+-------------------------------------
+```{r}
+plot(forecast(fit.nc, h=100, level=95), col=2)
+```
+
+
