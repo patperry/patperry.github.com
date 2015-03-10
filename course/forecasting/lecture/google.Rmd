@@ -1,0 +1,259 @@
+---
+title: Forecasting Time Series
+subtitle: Analysis of the Google Series
+author: Patrick Perry 
+date: March 10, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# set random number generator seed to ensure consistent runs
+set.seed(0)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+
+
+---
+
+```{r}
+library("forecast")
+```
+
+
+Google Series (GOOG)
+--------------------
+Daily closing price: May 2, 2005 to December 29, 2006.
+
+```{r}
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/google.csv")
+GOOG <- data$google
+n <- length(GOOG)
+time <- 1:n
+plot(time, GOOG, type="l", col=2)
+```
+
+
+Log GOOG
+--------
+
+```{r}
+log.GOOG <- log(GOOG)
+plot(time, log.GOOG, type="l", col=2)
+Acf(log.GOOG)
+Pacf(log.GOOG)
+```
+
+
+Diff Log GOOG
+-------------
+
+```{r}
+diff.log.GOOG <- c(NA, diff(log.GOOG))
+
+plot(time, diff.log.GOOG, type="l", col=2)
+Acf(diff.log.GOOG)
+Pacf(diff.log.GOOG)
+```
+
+
+2nd Diff Log GOOG
+-----------------
+
+```{r}
+diff2.log.GOOG <- c(NA, diff(diff.log.GOOG))
+
+plot(time, diff2.log.GOOG, type="l", col=2)
+Acf(diff2.log.GOOG)
+Pacf(diff2.log.GOOG)
+```
+
+
+ARIMA(0, 1, 0)
+--------------
+
+```{r}
+fit.00 <- Arima(log.GOOG, c(0, 1, 0), include.constant=FALSE)
+print(fit.00)
+fit.00$aicc
+```
+
+
+AICC for Candidate Models (Buggy Version)
+-----------------------------------------
+
+```{r}
+# Without constant:
+fit.00 <- Arima(log.GOOG, c(0, 1, 0), include.constant=FALSE)
+fit.01 <- Arima(log.GOOG, c(0, 1, 1), include.constant=FALSE)
+fit.02 <- Arima(log.GOOG, c(0, 1, 2), include.constant=FALSE)
+fit.10 <- Arima(log.GOOG, c(1, 1, 0), include.constant=FALSE)
+fit.11 <- Arima(log.GOOG, c(1, 1, 1), include.constant=FALSE)
+fit.12 <- Arima(log.GOOG, c(1, 1, 2), include.constant=FALSE)
+fit.20 <- Arima(log.GOOG, c(2, 1, 0), include.constant=FALSE)
+fit.21 <- Arima(log.GOOG, c(2, 1, 1), include.constant=FALSE)
+fit.22 <- Arima(log.GOOG, c(2, 1, 2), include.constant=FALSE)
+
+# With constant:
+fit.00c <- Arima(log.GOOG, c(0, 1, 0), include.constant=TRUE)
+fit.01c <- Arima(log.GOOG, c(0, 1, 1), include.constant=TRUE)
+fit.02c <- Arima(log.GOOG, c(0, 1, 2), include.constant=TRUE)
+fit.10c <- Arima(log.GOOG, c(1, 1, 0), include.constant=TRUE)
+fit.11c <- Arima(log.GOOG, c(1, 1, 1), include.constant=TRUE)
+fit.12c <- Arima(log.GOOG, c(1, 1, 2), include.constant=TRUE)
+fit.20c <- Arima(log.GOOG, c(2, 1, 0), include.constant=TRUE)
+fit.21c <- Arima(log.GOOG, c(2, 1, 1), include.constant=TRUE)
+fit.22c <- Arima(log.GOOG, c(2, 1, 2), include.constant=TRUE)
+
+# Summarize Results
+models <- data.frame(p = rep(c(0, 0, 0, 1, 1, 1, 2, 2, 2), 2),
+                     d = rep(1, 18),
+                     q = rep(c(0, 1, 2), 6),
+                     include.constant = c(rep(FALSE, 9), rep(TRUE, 9)),
+                     loglik = c(fit.00$loglik, fit.01$loglik, fit.02$loglik,
+                                fit.10$loglik, fit.11$loglik, fit.12$loglik,
+                                fit.20$loglik, fit.21$loglik, fit.22$loglik,
+                                fit.00c$loglik, fit.01c$loglik, fit.02c$loglik,
+                                fit.10c$loglik, fit.11c$loglik, fit.12c$loglik,
+                                fit.20c$loglik, fit.21c$loglik, fit.22c$loglik),
+                     aicc = c(fit.00$aicc, fit.01$aicc, fit.02$aicc,
+                                fit.10$aicc, fit.11$aicc, fit.12$aicc,
+                                fit.20$aicc, fit.21$aicc, fit.22$aicc,
+                                fit.00c$aicc, fit.01c$aicc, fit.02c$aicc,
+                                fit.10c$aicc, fit.11c$aicc, fit.12c$aicc,
+                                fit.20c$aicc, fit.21c$aicc, fit.22c$aicc)
+                     )
+print(models, digits=6)
+```
+These results are unreliable.  Use the method described in the next seciton
+instead.
+
+
+
+
+AICC for Candidate Models (Correct Version)
+-------------------------------------------
+
+```{r}
+# Without constant:
+fit.00 <- Arima(diff.log.GOOG, c(0, 0, 0), include.constant=FALSE)
+fit.01 <- Arima(diff.log.GOOG, c(0, 0, 1), include.constant=FALSE)
+fit.02 <- Arima(diff.log.GOOG, c(0, 0, 2), include.constant=FALSE)
+fit.10 <- Arima(diff.log.GOOG, c(1, 0, 0), include.constant=FALSE)
+fit.11 <- Arima(diff.log.GOOG, c(1, 0, 1), include.constant=FALSE)
+fit.12 <- Arima(diff.log.GOOG, c(1, 0, 2), include.constant=FALSE)
+fit.20 <- Arima(diff.log.GOOG, c(2, 0, 0), include.constant=FALSE)
+fit.21 <- Arima(diff.log.GOOG, c(2, 0, 1), include.constant=FALSE)
+fit.22 <- Arima(diff.log.GOOG, c(2, 0, 2), include.constant=FALSE)
+
+# With constant:
+fit.00c <- Arima(diff.log.GOOG, c(0, 0, 0), include.constant=TRUE)
+fit.01c <- Arima(diff.log.GOOG, c(0, 0, 1), include.constant=TRUE)
+fit.02c <- Arima(diff.log.GOOG, c(0, 0, 2), include.constant=TRUE)
+fit.10c <- Arima(diff.log.GOOG, c(1, 0, 0), include.constant=TRUE)
+fit.11c <- Arima(diff.log.GOOG, c(1, 0, 1), include.constant=TRUE)
+fit.12c <- Arima(diff.log.GOOG, c(1, 0, 2), include.constant=TRUE)
+fit.20c <- Arima(diff.log.GOOG, c(2, 0, 0), include.constant=TRUE)
+fit.21c <- Arima(diff.log.GOOG, c(2, 0, 1), include.constant=TRUE)
+fit.22c <- Arima(diff.log.GOOG, c(2, 0, 2), include.constant=TRUE)
+
+# Summarize Results
+models <- data.frame(p = rep(c(0, 0, 0, 1, 1, 1, 2, 2, 2), 2),
+                     d = rep(1, 18),
+                     q = rep(c(0, 1, 2), 6),
+                     include.constant = c(rep(FALSE, 9), rep(TRUE, 9)),
+                     loglik = c(fit.00$loglik, fit.01$loglik, fit.02$loglik,
+                                fit.10$loglik, fit.11$loglik, fit.12$loglik,
+                                fit.20$loglik, fit.21$loglik, fit.22$loglik,
+                                fit.00c$loglik, fit.01c$loglik, fit.02c$loglik,
+                                fit.10c$loglik, fit.11c$loglik, fit.12c$loglik,
+                                fit.20c$loglik, fit.21c$loglik, fit.22c$loglik),
+                     aicc = c(fit.00$aicc, fit.01$aicc, fit.02$aicc,
+                                fit.10$aicc, fit.11$aicc, fit.12$aicc,
+                                fit.20$aicc, fit.21$aicc, fit.22$aicc,
+                                fit.00c$aicc, fit.01c$aicc, fit.02c$aicc,
+                                fit.10c$aicc, fit.11c$aicc, fit.12c$aicc,
+                                fit.20c$aicc, fit.21c$aicc, fit.22c$aicc)
+                     )
+print(models, digits=6)
+```
+
+Selected Model
+--------------
+
+```{r}
+fit.best <- Arima(log.GOOG, c(0, 1, 0), include.constant=TRUE)
+print(fit.best)
+```
+
+Note: constant (`drift`) is not significant.  However, the hypothesis tests
+relies on the model being correct, so the z-statistic and corresponding
+p-value are probably not reliable.  It's better to use AICC to determine
+whether to include a constant.
+
+
+Residuals
+---------
+
+```{r}
+resid <- residuals(fit.best)
+plot(time, resid, type="l", col=2)
+Acf(resid)
+Pacf(resid)
+```
+
+
+Ljung-Box Goodness-of-Fit Test
+------------------------------
+
+```{r}
+# fitdf = 1 (p = 0, q = 0, model includes constant)
+Box.test(resid, lag=12, type = "Ljung-Box", fitdf=1)
+Box.test(resid, lag=24, type = "Ljung-Box", fitdf=1)
+Box.test(resid, lag=36, type = "Ljung-Box", fitdf=1)
+Box.test(resid, lag=48, type = "Ljung-Box", fitdf=1)
+```
+
+
+
+Forecasts From Selected Model
+-----------------------------
+```{r}
+forecast(fit.best, h=10, level=95)
+plot(forecast(fit.best, h=100, level=95), col=2)
+```
+
+
+Forecasts From Model Without Constant
+-------------------------------------
+```{r}
+fit.00 <- Arima(log.GOOG, c(0, 1, 0), include.constant=FALSE)
+plot(forecast(fit.00, h=100, level=95), col=2)
+```
+
+
+Don't Use p-values for Model Selection
+--------------------------------------
+
+```{r}
+fit.11 <- Arima(log.GOOG, c(1, 1, 1), include.constant=FALSE)
+print(fit.11)
+
+(zstat.ar1 <- 0.895 / 0.140)
+(pval.ar1 <- 2*pnorm(-abs(zstat.ar1)))
+
+(zstat.ma1 <- -0.866 / 0.157)
+(pval.ma1 <- 2*pnorm(-abs(zstat.ma1)))
+```
+

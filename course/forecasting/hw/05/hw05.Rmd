@@ -1,0 +1,161 @@
+Homework 5
+==========
+*Firstname Lastname (Replace this part with your name)*
+
+
+For this assignment, we will again be using the `forecast` library.
+
+```{r}
+library("forecast")
+```
+
+The dataset is the unemployment rate, monthly, seasonally adjusted.
+
+```{r}
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/unemployment.csv")
+date <- as.Date(data$date)
+time <- 1:length(date)
+unemp <- data$unemployment
+```
+
+
+Part A
+------
+
+We first construct the log unemployment series, and its first two differences:
+```{r}
+# edit and uncomment the following lines
+# log.unemp <- ??
+# diff.log.unemp <- ??
+# diff2.log.unemp <- ??
+```
+
+Now, we use time series plots, ACFs and PACFs to determine the appropriate
+level of differencing.
+
+Here are the plots for the original series:
+
+```{r}
+# add TS plot, ACF, and Pacf for log.unemp
+```
+
+Here are the plots for the first difference:
+
+```{r}
+# add TS plot, ACF, and Pacf for diff.log.unemp
+```
+
+Here are the plots for the second difference:
+
+```{r}
+# add TS plot, ACF, and Pacf for diff2.log.unemp
+```
+
+
+**Choose d for an ARIMA model.  Explain your reasoning.**
+
+
+
+Part B
+------
+
+Here are the AICC values for the models under consideration:
+
+```{r}
+# Given values for p and q, to compute the AICC for an ARMA(p,q) model,
+# use the following command:
+#
+#     Arima(x, c(p, 0, q), include.constant=FALSE)$aicc
+#
+# This command will do the same, but with a constant in the model:
+#
+#     Arima(x, c(p, 0, q), include.constant=TRUE)$aicc
+#
+#
+# IMPORTANT NOTE:
+# 
+# The Arima command accepts other values for d, but if d is nonzero, the
+# reported value of AICC is incorrect when the model includes a constant
+# (there is a bug in the R implementation).
+#
+# As a workaround, to get the AICC for an ARIMA(p,1,q)  model, use the commands
+#
+#     Arimia(diff(x), c(p, 0, q), include.constant=FALSE)$aicc
+#     Arimia(diff(x), c(p, 0, q), include.constant=TRUE)$aicc
+#
+# For an ARIMA(p,2,q), use 
+#
+#     Arimia(diff(diff(x)), c(p, 0, q), include.constant=FALSE)$aicc
+#     Arimia(diff(diff(x)), c(p, 0, q), include.constant=TRUE)$aicc
+#
+
+
+# Use these commands to get the AICC values for all 18 models under
+# consideration.  You will need to call the Arima funciton 18 times.
+```
+
+**What (p,d,q) is selected by AICC?  Does the model include a constant?**
+
+
+Part C
+------
+
+Here is the estimated model:
+```{r}
+# edit and uncomment the following two lines
+# fit <- Arima(log.unemp, ???, include.constant=???)
+# print(fit)
+```
+
+
+**Are all of the parameters statistically significant?**
+
+
+Part D
+------
+
+**Write the complete form of the fitted model. (No code required.)**
+
+
+
+Part E
+------
+
+Here are the Ljung-Box statistics for lack of fit:
+
+```{r}
+# Hint: use Box.test function.  You must call this function four times,
+# for lags 12, 24, 36, and 48.
+```
+
+**Does the model seem to be adequate?**
+
+
+Part F
+------
+
+Here is a plot of the residuals, along with the ACF and the PACF of the
+residuals:
+
+```{r}
+# Add TS plot, ACF, and PACF
+```
+
+**Do these plots indicate any inadequacies in the model?**
+
+
+Part G
+------
+
+Here is the original data, along with the forecasts and 95% forecast intervals
+for lead times 1 to 30:
+
+```{r}
+# Hint: use the forecast function
+```
+
+**Do the forecasts seem reasonable?**
+
+
+**Do the forecast intervals seem excessively wide?**
+
