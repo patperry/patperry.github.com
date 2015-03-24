@@ -1,0 +1,185 @@
+---
+title: Forecasting Time Series
+subtitle: Bootstrap Forecast Intervals
+author: Patrick Perry 
+date: March 24, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# consistent output
+set.seed(0)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+
+Preamble
+--------
+
+```{r}
+library("forecast")
+```
+
+
+Hedge Fund Index
+----------------
+
+CISDM Equal Weighted Hedge Fund Index NAV, Monthly, 1990 - Present
+
+```{r}
+# Remove earlier time points
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/hedge.csv")
+data$date <- as.Date(data$date)
+data <- subset(data, date >= "1990-01-01")
+
+# Extract returns
+hedge <- data$return
+n <- length(hedge)
+time <- 1:n
+plot(time, hedge, type="l", col=2)
+```
+
+
+ACF, PACF
+---------
+
+Original Series
+```{r}
+par(mfrow=c(1,2))
+Acf(hedge)
+Pacf(hedge)
+```
+
+First Difference
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(hedge))
+Pacf(diff(hedge))
+```
+
+
+AICC
+----
+
+```{r}
+d <- 0
+for (p in 0:2) {
+    for (q in 0:2) {
+        fit <- Arima(hedge, c(p, d, q), include.constant=TRUE)
+        cat("ARIMA(", p, ",", d, ",", q, ") : ", fit$aicc, "\n", sep="")
+    }
+}
+```
+
+
+Estimation
+----------
+
+```{r}
+(fit <- Arima(hedge, c(1, 0, 0), include.constant=TRUE))
+```
+
+
+Diagnostic Checking
+-------------------
+
+```{r}
+resid <- residuals(fit)
+par(mfrow=c(1,2))
+Acf(resid)
+Pacf(resid)
+```
+
+Ljung-Box Tests
+---------------
+
+```{r}
+Box.test(resid, lag=12, type="Ljung-Box", fitdf=2)
+Box.test(resid, lag=24, type="Ljung-Box", fitdf=2)
+Box.test(resid, lag=36, type="Ljung-Box", fitdf=2)
+Box.test(resid, lag=48, type="Ljung-Box", fitdf=2)
+```
+
+
+Histogram of Residuals
+----------------------
+
+```{r}
+hist(resid)
+```
+
+Normal Probability Plot of Residuals
+------------------------------------
+
+```{r}
+qqnorm(resid)
+```
+
+
+Simulating from The Fitted Model
+--------------------------------
+
+```{r}
+nsim <- 5
+for (i in 1:nsim) {
+    plot(time, hedge, col=2, t="l")
+    lines(time, simulate(fit), col=1)
+}
+```
+
+
+Bootstrap Simulations
+---------------------
+```{r}
+nsim <- 5
+for (i in 1:nsim) {
+    plot(time, hedge, col=2, t="l")
+    lines(time, simulate(fit, bootstrap=TRUE), col=1)
+}
+```
+
+
+Gaussian Forecasts 
+------------------
+
+```{r}
+plot(forecast(fit, level=c(95, 99)))
+```
+
+
+Bootstrap Forecasts
+-------------------
+```{r}
+plot(forecast(fit, level=c(95, 99), bootstrap=TRUE, npaths=10000))
+```
+
+Comparison
+----------
+
+```{r}
+forecast(fit, h=2, level=c(80, 95, 99, 99.9))
+forecast(fit, h=2, level=c(80, 95, 99, 99.9), bootstrap=TRUE, npaths=10000)
+```
+
+
+Is This Useful?
+---------------
+```{r}
+hedge.forecast <- fitted.values(fit)
+
+summary(hedge)                     # 296 observations
+summary(hedge[hedge.forecast > 0]) # 282 observations
+summary(hedge[hedge.forecast > 1]) # 145 observations
+summary(hedge[hedge.forecast > 2]) # only 8 observations
+```

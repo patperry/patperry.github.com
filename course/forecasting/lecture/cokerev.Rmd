@@ -1,0 +1,199 @@
+---
+title: Forecasting Time Series
+subtitle: Coca-Cola Revenue Analysis
+author: Patrick Perry 
+date: March 24, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# consistent output
+set.seed(0)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+Preample
+--------
+
+```{r}
+library("forecast")
+```
+
+
+Coke Revenue
+------------
+Coca-Cola Net Revenue, Quarterly, 1994-2009.
+
+```{r}
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/cokerev.csv")
+date <- as.Date(data$date)
+time <- 1:length(date)
+revenue <- data$revenue
+```
+
+Time Series Plots
+----------------
+
+```{r}
+plot(date, revenue, type="l", col=2)
+```
+
+ACF, PACF
+---------
+
+Original Series
+```{r}
+par(mfrow=c(1,2))
+Acf(revenue)
+Pacf(revenue)
+```
+
+
+First Difference
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(revenue))
+Pacf(diff(revenue))
+```
+
+
+Seasonal Difference of First Difference
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(diff(revenue), 4))
+Pacf(diff(diff(revenue), 4))
+```
+
+
+Seasonal Difference of Second Difference
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(diff(diff(revenue)), 4))
+Pacf(diff(diff(diff(revenue)), 4))
+```
+
+Second Seasonal Difference of First Difference
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(diff(diff(revenue), 4), 4))
+Pacf(diff(diff(diff(revenue), 4), 4))
+```
+
+
+AICC
+----
+
+Based on ACFs, PACFs, choose d=1, D=1.  Next, we need (p,q) and (P,Q)
+
+```{r}
+d <- 1
+D <- 1
+
+for (p in 0:2) {
+    for (q in 0:2) {
+        for (P in 0:2) {
+            for (Q in 0:2) {
+                fit <- list(aicc=NA)
+                try({
+                    fit <- Arima(revenue, c(p,d,q),
+                                 seasonal=list(order=c(P,D,Q), period=4),
+                                 method="ML")
+                })
+                cat("ARIMA(", p, ",", d, ",", q, ")",
+                    "(", P, ",", D, ",", Q, ")[4]",
+                    " : ", fit$aicc, "\n", sep="")
+            }
+        }
+    }
+}
+```
+
+
+Estimation
+----------
+
+```{r}
+(fit <- Arima(revenue, c(0,1,0), seasonal=list(order=c(0,1,1), period=4)))
+```
+
+
+Diagnostic Checking
+-------------------
+
+```{r}
+resid <- residuals(fit)
+```
+
+---
+
+Time Series Plot of Residuals
+```{r}
+plot(date, resid, type="l", col=2)
+```
+Should we have taken logs?
+
+---
+
+
+ACF, PACF of Residuals
+```{r}
+par(mfrow=c(1,2))
+Acf(resid)
+Pacf(resid)
+```
+
+---
+
+Ljung-Box Tests
+```{r}
+Box.test(resid, lag=12, type="Ljung-Box", fitdf=5)
+Box.test(resid, lag=24, type="Ljung-Box", fitdf=5)
+Box.test(resid, lag=36, type="Ljung-Box", fitdf=5)
+Box.test(resid, lag=48, type="Ljung-Box", fitdf=5)
+```
+
+
+Forecasting
+-----------
+
+Gaussian
+```{r}
+plot(forecast(fit, h=20))
+```
+
+Bootstrap
+```{r}
+plot(forecast(fit, h=20, boot=TRUE))
+```
+
+Comparison With Non-Seasonal Model
+----------------------------------
+
+```{r}
+fit0 <- Arima(revenue, c(0,1,1))
+```
+
+Gaussian
+```{r}
+plot(forecast(fit0, h=20))
+```
+
+Bootstrap
+```{r}
+plot(forecast(fit0, h=20, boot=TRUE))
+```
+
+```{r}
+hist(resid(fit0), 20)
+```

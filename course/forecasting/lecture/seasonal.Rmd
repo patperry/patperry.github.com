@@ -1,0 +1,234 @@
+---
+title: Forecasting Time Series
+subtitle: Seasonal Models
+author: Patrick Perry
+date: March 24, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+
+```{r}
+library("forecast")
+```
+
+
+The dataset is the log unemployment rate, monthly, seasonally adjusted.
+
+```{r}
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/unemployment.csv")
+date <- as.Date(data$date)
+time <- 1:length(date)
+unemp <- data$unemployment
+log.unemp <- log(unemp)
+```
+
+---
+
+Time series plot:
+
+```{r}
+plot(date, log.unemp, type="l", col=2)
+```
+
+ACF and PACF:
+
+```{r}
+par(mfrow=c(1,2))
+Acf(log.unemp)
+Pacf(log.unemp)
+```
+
+---
+
+In HW5, we fit an ARIMA(2,1,2) model without a constant.  The ACF of the
+residuals shows a clear seasonal correlation pattern (even though the original
+series was supposed to be seasonally adjusted).
+
+```{r}
+fit1 <- Arima(log.unemp, c(2,1,2))
+resid1 <- residuals(fit1)
+Acf(resid1)
+```
+
+This is confirmed by the Ljung-Box tests.
+```{r}
+Box.test(resid1, lag=12, type="Ljung-Box", fitdf=4)
+Box.test(resid1, lag=24, type="Ljung-Box", fitdf=4)
+Box.test(resid1, lag=36, type="Ljung-Box", fitdf=4)
+Box.test(resid1, lag=48, type="Ljung-Box", fitdf=4)
+```
+
+---
+
+
+The original data source claims that it is seasonally adjusted, but it does
+not appear that the seasonal trend has been completely removed.  Let's go back
+to the original (non-seasonal adjusted) data:
+
+```{r}
+data.nsa <- read.csv("http://ptrckprry.com/course/forecasting/data/unemployment-nsa.csv")
+
+unemp.nsa <- data.nsa$unemployment
+log.unemp.nsa <- log(unemp.nsa)
+```
+
+---
+
+For comparison, here is the original series, along with the
+seasonally-adjusted version
+
+```{r}
+plot(date, log.unemp.nsa, ylab="Log Unemp.", type="l", col=2)
+lines(date, log.unemp, col=1)
+```
+
+---
+
+For the rest of this analysis, we will work with the original (not
+"seasonally-adjusted" data):
+
+```{r}
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/unemployment-nsa.csv")
+date <- as.Date(data$date)
+time <- 1:length(date)
+unemp <- data$unemployment
+log.unemp <- log(unemp)
+```
+
+
+---
+
+One simple method of seasonal adjustment is to remove the monthly averages
+before analyzing the series.  Here is code to compute these averages and
+adjust the series
+
+```{r}
+# Extract the month of each observation
+month <- factor(months(date), levels=format(ISOdate(2000,1:12,1),"%B"))
+
+# Compute the monthly averages
+month.avg <- c(by(log.unemp, month, mean))
+print(month.avg)
+
+log.unemp.adj <- log.unemp - month.avg[month]
+```
+
+---
+
+For the log unemployment series, the adjustment doesn't work very well:
+```{r}
+plot(date, log.unemp - mean(log.unemp), type="l", col=2)
+lines(date, log.unemp.adj, col=1)
+
+Acf(diff(log.unemp.adj))
+```
+
+---
+
+Let's try selecting a seasonal ARIMA model with AICC:
+
+```{r}
+d <- 1
+D <- 1
+for (p in 0:2) {
+    for (q in 0:2) {
+        for (P in 0:2) {
+            for (Q in 0:2) {
+                fit <- list(aicc=NA)
+                try({
+                    fit <- Arima(log.unemp, c(p,d,q),
+                                 seasonal=list(order=c(P,D,Q), period=12),
+                                 method="ML")
+                })
+                cat("ARIMA",
+                    "(", p, ",", d, ",", q, ")",
+                    "(", P, ",", D, ",", Q, ")[12]",
+                    " : ", fit$aicc, "\n", sep="")
+            }
+        }
+    }
+}
+```
+
+---
+
+```{r}
+fit <- Arima(log.unemp, c(2,1,2), seasonal=list(order=c(0,1,1), period=12))
+resid <- residuals(fit)
+par(mfrow=c(1,2))
+Acf(resid)
+Pacf(resid)
+```
+
+```{r}
+Box.test(resid, lag=12, type="Ljung-Box", fitdf=5)
+Box.test(resid, lag=24, type="Ljung-Box", fitdf=5)
+Box.test(resid, lag=36, type="Ljung-Box", fitdf=5)
+Box.test(resid, lag=48, type="Ljung-Box", fitdf=5)
+```
+
+```{r}
+fit0 <- Arima(log.unemp, c(2,1,2))
+```
+
+Short-Range (10 Month) Forecasts
+--------------------------------
+
+```{r}
+n <- max(time)
+par(mfrow=c(1,2))
+plot(forecast(fit, h=10))
+plot(forecast(fit, h=10), xlim=c(n - 18, n + 10))
+
+par(mfrow=c(1,2))
+plot(forecast(fit0, h=10))
+plot(forecast(fit0, h=10), xlim=c(n - 18, n + 10))
+```
+
+Mid-Range (2 Year) Forecasts
+----------------------------
+
+```{r}
+par(mfrow=c(1,2))
+plot(forecast(fit, h=24))
+plot(forecast(fit, h=24), xlim=c(n - 100, n + 2*12))
+
+par(mfrow=c(1,2))
+plot(forecast(fit0, h=24))
+plot(forecast(fit0, h=24), xlim=c(n - 100, n + 2*12))
+```
+
+Long-Range (10 Year) Forecasts
+------------------------------
+
+```{r}
+par(mfrow=c(1,2))
+plot(forecast(fit, h=10*12))
+plot(forecast(fit, h=10*12), xlim=c(n - 100, n + 10*12))
+
+par(mfrow=c(1,2))
+plot(forecast(fit0, h=10*12))
+plot(forecast(fit0, h=10*12), xlim=c(n - 100, n + 10*12))
+```
+
+Long-Range (50 Year) Forecasts
+------------------------------
+
+```{r}
+plot(forecast(fit, h=50*12))
+plot(forecast(fit0, h=50*12))
+```
