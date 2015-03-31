@@ -1,0 +1,117 @@
+---
+title: Forecasting Time Series
+subtitle: Chaos
+author: Patrick Perry 
+date: March 31, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# consistent output
+set.seed(0)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+Iteratng a Map
+--------------
+
+```{r}
+iterate <- function(n, f, x0, ...)
+{
+    x <- rep(NA, n)
+    x[1] <- x0
+
+    for (i in 1:(n-1)) {
+        x[i+1] <- f(x[i], ...)
+    }
+
+    x
+}
+```
+
+Linear Map
+----------
+
+```{r}
+f <- function(x, alpha)
+{
+    alpha * x
+}
+```
+
+
+**alpha = +0.7**
+
+```{r}
+plot(iterate(30, f, x0=0.1, alpha=0.7), type="b", col=2)
+```
+
+
+**alpha = -0.7**
+
+```{r}
+plot(iterate(30, f, x0=0.1, alpha=-0.7), type="b", col=2)
+```
+
+**alpha = +1.7**
+
+```{r}
+plot(iterate(30, f, x0=0.1, alpha=1.7), type="b", col=2)
+```
+
+
+**alpha = -1.7**
+
+```{r}
+plot(iterate(30, f, x0=0.1, alpha=-1.7), type="b", col=2)
+```
+
+
+
+Quadratic Map
+-------------
+
+```{r}
+f <- function(x, r)
+{
+    (1 + r) * x - r * x^2
+}
+```
+
+
+**Fixed Points**
+
+```{r}
+x <- seq(-0.5, 1.5, length.out=100)
+plot(x, f(x, r=1.2), type="l", col=2)
+lines(x, x, col=1, lty=2)
+```
+
+
+**Fixed Point at 0**
+```{r}
+plot(iterate(10, f, x0=0.01, r=1.2), type="b", col=2)
+```
+
+**Fixed Point at 1**
+```{r}
+plot(iterate(10, f, x0=1.01, r=1.2), type="b", col=2)
+```
+
+```{r}
+for (r in c(1.775, 2.0, 2.2, 2.525, 2.55, 2.7, 2.838)) {
+    x <- iterate(130, f, x0=0.1, r=r)
+    plot(x[101:130], type="b", col=2, main=paste("r =", r), xlab="", ylab="")
+}
+```
