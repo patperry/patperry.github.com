@@ -1,0 +1,92 @@
+Homework 6
+==========
+*Firstname Lastname (Replace this part with your name)*
+
+```{r}
+library("forecast")
+```
+
+For this assignment, we analyze the `chaos1` and `chaos2` series.
+
+```{r}
+chaos1 <- read.csv("http://ptrckprry.com/course/forecasting/data/chaos1.csv")$value
+chaos2 <- read.csv("http://ptrckprry.com/course/forecasting/data/chaos2.csv")$value
+time <- 1:50
+```
+
+
+Problem 1
+---------
+
+```{r}
+# print the value of x1 for chaos1
+```
+
+**Check that `x1 = f(x0)`, for `chaos1`.**
+
+
+Problem 2
+---------
+
+```{r}
+# Plot chaos1 and chaos2 in separate plots.
+```
+
+**Do the series look random?**
+
+**Are they in fact random?**
+
+**Do the series look stationary?**
+
+
+Problem 3
+---------
+
+```{r}
+# Plot the ACF and PACF for chaos1
+```
+
+**Based on these, suggest an ARMA model.**
+
+**Would this model provide the best possible forecasts?**
+
+
+Problem 4
+---------
+
+```{r}
+# Plot both chaos1 and chaos2 on the same plot
+```
+
+**Do the paths look similar?**
+
+**Should they look similar when t is close to 1?**
+
+**What should happen if `chaos1` and `chaos2` happen to get very close
+together at some later time?**
+
+
+Problem 5
+---------
+
+```{r}
+# Plot x2, ..., x50 versus x1, ..., x49 for chaos1
+# (Replace ???? and uncomment the following line)
+# plot(????, ????, type="p")
+
+# Hint:
+# If x is a vector of length 50, then
+#   x[-1]  is equal to c(x[2], x[3], ..., x[50])
+#   x[-50] is equal to c(x[1], x[2], ..., x[49])
+```
+
+
+**Does this plot reveal the map (in other words, the function *f*) which
+generated the data?**  
+
+
+**Do you see why this *f* is called the tent map?**
+
+
+**Does this plot help us to see that `{ x_t }` is not an AR(1) series?  How?**
+
