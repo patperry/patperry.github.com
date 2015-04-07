@@ -1,0 +1,206 @@
+---
+title: Forecasting Time Series
+subtitle: NASDAQ Analysis
+author: Patrick Perry 
+date: April 7, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# consistent runs
+set.seed(0)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+
+Preamble
+--------
+
+```{r}
+library("forecast")
+library("e1071")                                                  # kurtosis
+source("http://ptrckprry.com/course/forecasting/code/ad.test.R")  # ad.test
+```
+
+NADAQ Series
+------------
+
+Daily Adjusted Close
+
+```{r}
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/nasdaq.csv")
+date <- as.Date(data$date)
+time <- seq_along(date)
+NASDAQ <- data$nasdaq
+```
+
+Adjusted Close
+--------------
+
+```{r}
+plot(date, NASDAQ, type="l", col=2)
+```
+
+
+Differences
+-----------
+
+```{r}
+diff.NASDAQ <- c(NA, diff(NASDAQ))
+plot(date, diff.NASDAQ, type="l", col=2)
+```
+
+
+Log (Adj. Close)
+----------------
+
+```{r}
+log.NASDAQ <- log(NASDAQ)
+plot(date, log.NASDAQ, type="l", col=2)
+```
+
+
+Returns
+-------
+
+```{r}
+diff.log.NASDAQ <- c(NA, diff(log.NASDAQ))
+plot(date, diff.log.NASDAQ, type="l", col=2)
+```
+
+
+
+
+
+Test for Normality in Returns
+-----------------------------
+
+**Histogram**
+
+```{r}
+hist(diff.log.NASDAQ, 50, col=2)
+```
+
+
+**Boxplot**
+
+```{r}
+boxplot(diff.log.NASDAQ, col=2)
+```
+
+
+**Normal Quantile-Quantile Plot**
+
+```{r}
+qqnorm(diff.log.NASDAQ, col=2)
+qqline(diff.log.NASDAQ, col=1, lty=2)
+```
+
+
+**Kurtosis**
+
+```{r}
+kurtosis(diff.log.NASDAQ, na.rm=TRUE) # excess kurtosis, 0 for Gaussian
+```
+
+**Anderson-Darling Test**
+
+```{r}
+ad.test(diff.log.NASDAQ)
+```
+
+
+Autocorrelations, Partial Autocorrelations
+------------------------------------------
+
+```{r}
+par(mfrow=c(1,2))
+Acf(diff.log.NASDAQ)
+Pacf(diff.log.NASDAQ)
+```
+
+
+ARIMA Model
+-----------
+
+```{r}
+# p, q, constant chosen by AICc
+fit <- Arima(log.NASDAQ, c(3,1,0), include.constant=TRUE)
+print(fit)
+```
+
+
+Residuals
+---------
+
+**Time Series Plot**
+
+```{r}
+resid <- residuals(fit)
+plot(date, resid, type="l", col=3)
+```
+
+**Ljung-Box Tests**
+
+```{r}
+fitdf <- 4
+Box.test(resid, lag=12, type="Ljung-Box", fitdf=fitdf)
+Box.test(resid, lag=24, type="Ljung-Box", fitdf=fitdf)
+Box.test(resid, lag=36, type="Ljung-Box", fitdf=fitdf)
+Box.test(resid, lag=48, type="Ljung-Box", fitdf=fitdf)
+```
+
+**ACF, PACF**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(resid)
+Pacf(resid)
+```
+
+
+Volatility Proxies
+------------------
+
+**Squared Residual**
+
+```{r}
+plot(date, resid^2, type="l", col=3)
+```
+
+**Absolute Residual**
+
+```{r}
+plot(date, abs(resid), type="l", col=3)
+```
+
+
+Autocorrelation in Squared Residuals
+------------------------------------
+
+```{r}
+par(mfrow=c(1,2))
+Acf(resid^2)
+Pacf(resid^2)
+```
+
+
+First Difference
+----------------
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(resid^2))
+Pacf(diff(resid^2))
+```
+

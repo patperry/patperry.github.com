@@ -1,0 +1,189 @@
+---
+title: Forecasting Time Series
+subtitle: General Motors Volatility
+author: Patrick Perry 
+date: April 7, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# consistent runs
+set.seed(0)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+
+Preamble
+--------
+
+```{r}
+library("forecast")
+library("rugarch") # ARCH/GARCH models
+```
+
+General Motors Returns
+----------------------
+
+Daily GM Returns (September 1, 1987 - November 30, 1987)
+
+```{r}
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/gm.csv")
+date <- as.Date(data$date)
+time <- seq_along(date)
+ret.GM <- data$GM   # daily return
+```
+
+
+Daily Returns
+-------------
+
+```{r}
+plot(date, ret.GM, xlab="Date", ylab="Daily Return", type="l", col=2)
+crash <- which(date == "1987-10-19")
+text(date[crash], ret.GM[crash], "Oct 19, 1987")
+```
+
+Before and After Crash
+----------------------
+
+```{r}
+boxplot(ret.GM[time < crash - 1], ret.GM[time > crash + 1],
+        names=c(paste("To",   strftime(date[crash - 1], "%b %d")),
+                paste("From", strftime(date[crash + 1], "%b %d"))),
+        ylab="Daily Return", col=2)
+```
+
+Autocorrelations, Partial Autocorrelations
+------------------------------------------
+
+```{r}
+par(mfrow=c(1,2))
+Acf(ret.GM)
+Pacf(ret.GM)
+```
+
+
+Squared Returns
+---------------
+
+```{r}
+plot(date, ret.GM^2, xlab="Date", ylab="Sq. Return", type="l", col=2)
+```
+
+
+Squares: Autocorrelations, Partial Autocorrelations
+---------------------------------------------------
+
+```{r}
+par(mfrow=c(1,2))
+Acf(ret.GM^2)
+Pacf(ret.GM^2)
+```
+
+
+Simulated ARCH
+--------------
+
+**Simulated Series**
+
+```{r}
+
+set.seed(0)
+n <- 100
+t <- 1:n
+
+# ARCH(1)
+arch1.spec = ugarchspec(variance.model = list(garchOrder=c(1,0)), 
+                        mean.model = list(armaOrder=c(0,0)),
+                        fixed.pars=list(mu = 0, omega=0.25, alpha1=0.5))
+arch1.sim <- ugarchpath(arch1.spec, n.sim=n)
+arch1 <- drop(arch1.sim@path$seriesSim)
+
+# ARCH(2)
+arch2.spec = ugarchspec(variance.model = list(garchOrder=c(2,0)), 
+                        mean.model = list(armaOrder=c(0,0)),
+                        fixed.pars=list(mu = 0, omega=0.25, alpha1=0.6, alpha2=0.35))
+arch2.sim <- ugarchpath(arch2.spec, n.sim=n)
+arch2 <- drop(arch2.sim@path$seriesSim)
+```
+
+
+
+
+**Corresponding Integrated Series**
+
+```{r}
+arch1.int <- cumsum(arch1)
+arch2.int <- cumsum(arch2)
+```
+
+Time Series Plots
+
+**ARCH(1)**
+
+```{r}
+par(mfrow=c(1,2))
+plot(t, arch1, type="l", col=4)
+plot(t, arch1.int, type="l", col=4)
+```
+
+**ARCH(2)**
+
+```{r}
+par(mfrow=c(1,2))
+plot(t, arch2, type="l", col=5)
+plot(t, arch2.int, type="l", col=5)
+```
+
+
+ARCH(1) ACF, PACF
+-----------------
+
+**Raw Series**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(arch1)
+Pacf(arch1)
+```
+
+**Squares**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(arch1^2)
+Pacf(arch1^2)
+```
+
+
+
+ARCH(2) ACF, PACF
+-----------------
+
+**Raw Series**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(arch2)
+Pacf(arch2)
+```
+
+**Squares**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(arch2^2)
+Pacf(arch2^2)
+```
+

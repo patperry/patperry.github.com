@@ -1,0 +1,121 @@
+---
+title: Forecasting Time Series
+subtitle: ARCH Models
+author: Patrick Perry 
+date: April 7, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# consistent runs
+set.seed(0)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+Preamble
+--------
+
+```{r}
+library("forecast")
+library("rugarch")
+```
+
+
+ARCH(1)
+-------
+
+```{r}
+n <- 500
+time <- 1:n
+
+for (i in 1:5) {
+    arch1.spec = ugarchspec(variance.model = list(garchOrder=c(1,0)), 
+                        mean.model = list(armaOrder=c(0,0)),
+                        fixed.pars=list(mu = 0, omega=0.25, alpha1=0.5))
+    arch1.sim <- ugarchpath(arch1.spec, n.sim=n)
+    arch1 <- drop(arch1.sim@path$seriesSim)
+    arch1.int <- cumsum(arch1)
+
+    par(mfrow=c(1,2))
+    plot(time, arch1, col=2, type="l")
+    plot(time, arch1.int, col=2, type="l")
+}
+```
+
+
+ARCH(2)
+-------
+
+```{r}
+n <- 500
+time <- 1:n
+
+for (i in 1:5) {
+    arch2.spec = ugarchspec(variance.model = list(garchOrder=c(2,0)), 
+                            mean.model = list(armaOrder=c(0,0)),
+                            fixed.pars=list(mu = 0, omega=0.25, alpha1=0.6, alpha2=0.35))
+    arch2.sim <- ugarchpath(arch2.spec, n.sim=n)
+    arch2 <- drop(arch2.sim@path$seriesSim)
+    arch2.int <- cumsum(arch2)
+    
+    par(mfrow=c(1,2))
+    plot(time, arch2, col=3, type="l")
+    plot(time, arch2.int, col=3, type="l")
+}
+```
+
+
+ARCH(1) ACFs, PACFs
+-------------------
+
+**Original Series**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(arch1)
+Pacf(arch1)
+```
+
+
+**Squares**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(arch1^2)
+Pacf(arch1^2)
+```
+
+
+
+ARCH(2) ACFs, PACFs
+-------------------
+
+**Original Series**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(arch2)
+Pacf(arch2)
+```
+
+
+**Squares**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(arch2^2)
+Pacf(arch2^2)
+```
+
+
