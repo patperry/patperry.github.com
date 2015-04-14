@@ -1,0 +1,194 @@
+---
+title: Forecasting Time Series
+subtitle: Simulating ARCH Models
+author: Patrick Perry 
+date: April 14, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# consistent runs
+set.seed(0)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+Preamble
+--------
+
+```{r}
+library("forecast")
+library("rugarch")
+```
+
+
+Simulating ARCH(1)
+------------------
+
+```{r}
+n <- 1100
+omega <- 0.1
+alpha <- 0.5
+
+e <- rnorm(n)  
+x <- numeric(n)
+x[1] <- rnorm(1, sd = sqrt(omega/(1.0-alpha[1])))
+for(i in 2:n) {
+  h <- omega + alpha[1] * x[i-1]^2
+  x[i] <- e[i] * sqrt(h)
+}
+x1 <- x[101:1100] # throw away "burn-in"
+```
+
+**Time Series Plot**
+
+```{r}
+plot(x1, type="l", col=2)
+```
+
+**ACF, PACF of Series**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(x1)
+Pacf(x1)
+```
+
+**ACF, PACF of Squares**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(x1^2)
+Pacf(x1^2)
+```
+
+
+
+Simulating ARCH(2)
+------------------
+
+```{r}
+n <- 1100
+omega <- 0.1
+alpha <- c(0.5, 0.2)
+
+e <- rnorm(n)  
+x <- numeric(n)
+x[1:2] <- rnorm(2, sd = sqrt(omega/(1.0-alpha[1]-alpha[2])))
+for(i in 3:n) {
+  h <- omega + alpha[1] * x[i-1]^2 + alpha[2] * x[i-2]^2
+  x[i] <- e[i] * sqrt(h)
+}
+x2 <- x[101:1100] # throw away "burn-in"
+```
+
+
+
+**Time Series Plot**
+
+```{r}
+plot(x2, type="l", col=3)
+```
+
+**ACF, PACF of Series**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(x2)
+Pacf(x2)
+```
+
+**ACF, PACF of Squares**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(x2^2)
+Pacf(x2^2)
+```
+
+
+
+Simulating ARCH(1) With `rugarch`
+---------------------------------
+
+```{r}
+# requires library("rugarch")
+arch1.spec = ugarchspec(variance.model = list(garchOrder=c(1,0)), 
+                        mean.model = list(armaOrder=c(0,0)),
+                        fixed.pars=list(mu = 0, omega=0.1, alpha1=0.5))
+arch1.sim <- ugarchpath(arch1.spec, n.sim=1100)
+x1.ru <- drop(arch1.sim@path$seriesSim)[101:1000]
+```
+
+
+
+
+**Time Series Plot**
+
+```{r}
+plot(x1.ru, type="l", col=2)
+```
+
+**ACF, PACF of Series**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(x1.ru)
+Pacf(x1.ru)
+```
+
+**ACF, PACF of Squares**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(x1.ru^2)
+Pacf(x1.ru^2)
+```
+
+
+
+
+Simulating ARCH(2) with `rugarch`
+---------------------------------
+
+```{r}
+arch2.spec = ugarchspec(variance.model = list(garchOrder=c(2,0)), 
+                        mean.model = list(armaOrder=c(0,0)),
+                        fixed.pars=list(mu = 0, omega=0.1, alpha1=0.5, alpha2=0.2))
+arch2.sim <- ugarchpath(arch2.spec, n.sim=1100)
+x2.ru <- drop(arch2.sim@path$seriesSim)[101:1100]
+```
+
+
+**Time Series Plot**
+
+```{r}
+plot(x2.ru, type="l", col=3)
+```
+
+**ACF, PACF of Series**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(x2.ru)
+Pacf(x2.ru)
+```
+
+**ACF, PACF of Squares**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(x2.ru^2)
+Pacf(x2.ru^2)
+```
+

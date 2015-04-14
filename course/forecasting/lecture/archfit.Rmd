@@ -1,0 +1,277 @@
+---
+title: Forecasting Time Series
+subtitle: Fitting and Diagnostic Checking for ARCH Models
+author: Patrick Perry 
+date: April 14, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# consistent runs
+set.seed(0)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+Preamble
+--------
+
+```{r}
+library("e1071")     # kurtosis
+library("forecast")  # Acf, Pacv
+library("rugarch")   # ugarch*
+library("tseries")   # garch
+
+source("http://ptrckprry.com/course/forecasting/code/ad.test.R") # ad.test
+```
+
+
+Simulated ARCH(2)
+-----------------
+
+```{r}
+n <- 600
+arch2.spec = ugarchspec(variance.model = list(garchOrder=c(2,0)), 
+                        mean.model = list(armaOrder=c(0,0)),
+                        fixed.pars=list(mu = 0, omega=0.25, alpha1=0.6, alpha2=0.35))
+arch2.sim <- ugarchpath(arch2.spec, n.sim=n)
+x <- drop(arch2.sim@path$seriesSim)[101:600]
+time <- 1:length(x)
+```
+
+
+Time Series Plot
+----------------
+
+```{r}
+plot(time, x, type="l", col=2)
+```
+
+ACFs, PACFs
+-----------
+
+**Original Series**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(x)
+Pacf(x)
+```
+
+**Squares**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(x^2)
+Pacf(x^2)
+```
+
+
+Fitting an ARCH(q) with `tseries` Package
+-----------------------------------------
+
+```{r}
+# using the garch function from library("tseries")
+fit1 <- garch(x, c(0,1), trace=FALSE) # ARCH(1)
+fit2 <- garch(x, c(0,2), trace=FALSE) # ARCH(2)
+fit3 <- garch(x, c(0,3), trace=FALSE) # ARCH(3)
+fit4 <- garch(x, c(0,4), trace=FALSE) # ARCH(4)
+fit5 <- garch(x, c(0,5), trace=FALSE) # ARCH(5)
+```
+
+AICc with `tseries` Package
+---------------------------
+
+```{r}
+N <- length(x)
+loglik0 <- -0.5 * N * (1 + log(2 * pi * mean(x^2)))
+loglik1 <- logLik(fit1)
+loglik2 <- logLik(fit2)
+loglik3 <- logLik(fit3)
+loglik4 <- logLik(fit4)
+loglik5 <- logLik(fit5)
+
+loglik <- c(loglik0, loglik1, loglik2, loglik3, loglik4, loglik5)
+q <- c(0, 1, 2, 3, 4, 5)
+k <- q + 1
+aicc <- -2 * loglik  + 2 * k * N / (N - k - 1)
+
+print(data.frame(q, loglik, aicc))
+```
+
+
+Selected Model
+--------------
+
+```{r}
+fit.tseries <- garch(x, c(0, 2), trace=FALSE)
+summary(fit.tseries)
+```
+
+Fitting an ARCH(q) with `rugarch` Package
+-----------------------------------------
+
+```{r}
+# ARCH(1)
+spec1 <- ugarchspec(variance.model = list(garchOrder=c(1,0)), 
+                   mean.model = list(armaOrder=c(0,0), include.mean=FALSE))
+fit1 <- ugarchfit(spec1, x)
+loglik1 <- fit1@fit$LLH
+```
+
+
+```{r}
+q <- c(0, 1, 2, 3, 4, 5)
+loglik <- rep(NA, length(q))
+
+for (i in 1:length(q)) {
+    if (q[i] == 0) {
+        N <- length(x)
+        loglik[i] <- -0.5 * N * (1 + log(2 * pi * mean(x^2)))
+    } else {
+        spec <- ugarchspec(variance.model = list(garchOrder=c(q[i],0)), 
+                           mean.model = list(armaOrder=c(0,0), include.mean=FALSE))
+        fit <- ugarchfit(spec, x)
+        loglik[i] <- likelihood(fit)
+    }
+}
+
+k <- q + 1
+aicc <- -2 * loglik  + 2 * k * N / (N - k - 1)
+
+print(data.frame(q, loglik, aicc))
+```
+
+
+Selected Model
+--------------
+
+```{r}
+spec <- ugarchspec(variance.model = list(garchOrder=c(2,0)), 
+                   mean.model = list(armaOrder=c(0,0), include.mean=FALSE))
+fit.rugarch <- ugarchfit(spec, x)
+print(fit.rugarch)
+```
+
+
+Conditional Variance
+--------------------
+
+```{r}
+# Using tseries package
+h.tseries <- fit.tseries$fit[,1]^2
+
+# Using rugarch package
+h.rugarch <- as.numeric(sigma(fit.rugarch)^2)
+```
+
+
+```{r}
+time <- 1:length(x)
+par(mfrow=c(1,2))
+
+plot(time, x, type="l", col=2)
+plot(time, h.rugarch, type="l", col=3)
+```
+
+
+ARCH Residuals
+--------------
+
+```{r}
+# Using tseries package:
+resid.tseries <- residuals(fit.tseries)
+
+# Using rugarch package:
+resid.rugarch <- as.numeric(residuals(fit.rugarch, standardize=TRUE))
+
+# Note: resid.tseries is equal to (x / sqrt(h.tseries))
+#       resid.rugarch is equal to (x / sqrt(h.rugarch))
+```
+
+
+Diagnostic Checking for ARCH
+----------------------------
+
+```{r}
+resid.arch <- resid.rugarch
+plot(resid.arch, type="l", col=2)
+```
+
+
+Check White Noise
+-----------------
+
+**ACF, PACF**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(resid.arch)
+Pacf(resid.arch)
+```
+
+
+**Ljung-Box**
+
+```{r}
+Box.test(resid.arch, lag=1, type="Ljung-Box", fitdf=0)
+Box.test(resid.arch, lag=12, type="Ljung-Box", fitdf=0)
+Box.test(resid.arch, lag=24, type="Ljung-Box", fitdf=0)
+Box.test(resid.arch, lag=36, type="Ljung-Box", fitdf=0)
+```
+
+Check Gaussianity
+-----------------
+
+**Normal QQ Plot**
+
+```{r}
+qqnorm(resid.arch, col=2)
+qqline(resid.arch, col=1)
+```
+
+**Normality Statistics**
+
+```{r}
+kurtosis(resid.arch) # excess kurtosis, 0 for Gaussian
+ad.test(resid.arch)
+```
+
+
+Check Squared Residuals
+-----------------------
+
+**Time Series Plot**
+
+```{r}
+plot(resid.arch^2, type="l", col=3)
+```
+
+
+**ACF, PACF**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(resid.arch^2)
+Pacf(resid.arch^2)
+```
+
+
+**Ljung-Box**
+
+```{r}
+Box.test(resid.arch^2, lag=1, type="Ljung-Box", fitdf=0)
+Box.test(resid.arch^2, lag=12, type="Ljung-Box", fitdf=0)
+Box.test(resid.arch^2, lag=24, type="Ljung-Box", fitdf=0)
+Box.test(resid.arch^2, lag=36, type="Ljung-Box", fitdf=0)
+```
