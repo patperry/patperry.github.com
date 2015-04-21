@@ -1,0 +1,205 @@
+---
+title: Forecasting Time Series
+subtitle: NASDAQ ARCH Analysis
+author: Patrick Perry 
+date: April 21, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# consistent runs
+set.seed(0)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+
+Preamble
+--------
+
+```{r}
+library("forecast")
+library("tseries")
+```
+
+NADAQ Series
+------------
+
+Daily Adjusted Close
+
+```{r}
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/nasdaq.csv")
+date <- as.Date(data$date)
+time <- seq_along(date)
+NASDAQ <- data$nasdaq
+```
+
+
+Log (Adj. Close)
+----------------
+
+```{r}
+log.NASDAQ <- log(NASDAQ)
+plot(date, log.NASDAQ, type="l", col=2)
+```
+
+
+ACF, PACF of Returns
+--------------------
+
+```{r}
+diff.log.NASDAQ <- c(NA, diff(log.NASDAQ))
+
+par(mfrow=c(1,2))
+Acf(diff.log.NASDAQ)
+Pacf(diff.log.NASDAQ)
+```
+
+
+ARIMA Identification
+--------------------
+
+```{r}
+d <- 1
+
+# choose p, q with AICc
+for (include.constant in c(FALSE, TRUE)) {
+    for (p in 0:4) {
+        for (q in 0:4) {
+            # work-around bug in R by manually differencing
+            fit <- Arima(diff(log.NASDAQ), c(p,0,q),
+                         include.constant=include.constant, method="ML")
+             cat("ARIMA",
+                 "(", p, ",", d, ",", q, ")",
+                 "(constant=", include.constant, ")",
+                 " : ", fit$aicc, "\n", sep="")
+        }
+    }
+}
+```
+
+
+Selected ARIMA Model
+--------------------
+
+```{r}
+(fit.mean <- Arima(log.NASDAQ, c(3, 1, 4), include.constant=TRUE, method="ML"))
+```
+
+
+Residuals
+---------
+
+**Time Series Plots**
+
+```{r}
+resid <- as.numeric(residuals(fit.mean))
+plot(date, abs(resid), type="l", col=3)
+plot(date, resid^2, type="l", col=3)
+```
+
+
+**ACF, PACF**
+
+Abs. Residuals
+
+```{r}
+par(mfrow=c(1,2))
+Acf(abs(resid))
+Pacf(abs(resid))
+```
+
+Sq. Residuals
+
+```{r}
+par(mfrow=c(1,2))
+Acf(resid^2)
+Pacf(resid^2)
+```
+
+
+ARCH Identification
+-------------------
+
+**AICC Values for ARCH Models**
+
+```{r}
+q <- 0:10
+loglik <- rep(NA, length(q))
+N <- length(resid)
+
+for (i in 1:length(q)) {
+    if (q[i] == 0) {
+        loglik[i] <- -0.5 * N * (1 + log(2 * pi * mean(resid^2)))
+    } else {
+        fit <- garch(resid, c(0,q[i]), trace=FALSE)
+        loglik[i] <- logLik(fit)
+    }
+}
+
+k <- q + 1
+aicc <- -2 * loglik  + 2 * k * N / (N - k - 1)
+
+print(data.frame(q, loglik, aicc))
+```
+
+
+
+**AICC Value for GARCH(1,1) Model**
+
+```{r}
+fit <- garch(resid, c(1,1), trace=FALSE)
+loglik <- logLik(fit)
+k <- 2
+aicc <- -2 * loglik  + 2 * k * N / (N - k - 1)
+
+print(data.frame(loglik, aicc))
+```
+
+
+Selected Model
+--------------
+
+```{r}
+fit.var <- garch(resid, c(1,1), trace=FALSE)
+summary(fit.var)
+```
+
+
+Conditional Variances
+---------------------
+
+```{r}
+ht <- fit.var$fit[,1]^2
+plot(date, ht, type="l", col=4)
+```
+
+
+ARCH Residuals
+--------------
+
+**Time Series Plot**
+
+```{r}
+resid.arch <- resid / sqrt(ht)
+plot(date, resid.arch, col=4, type="l")
+```
+
+**ACF, PACF of Squares**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(resid.arch^2)
+Pacf(resid.arch^2)
+```
+

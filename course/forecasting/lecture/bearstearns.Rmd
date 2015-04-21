@@ -1,0 +1,337 @@
+---
+title: Forecasting Time Series
+subtitle: Bear Stearns Data Analysis
+author: Patrick Perry 
+date: April 21, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+Preamble
+--------
+
+```{r}
+library("forecast")
+library("rugarch")
+library("tseries")
+```
+
+
+Bear Stearns Daily Returns
+---
+
+January 2, 2008 - March 28, 2008
+
+```{r}
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/bearstearns.csv")
+date <- as.Date(data$date, format="%m/%d/%Y")
+time <- 1:length(date)
+BSCret <- data$BSCret
+```
+
+
+Time Series Plot
+----------------
+
+```{r}
+plot(date, BSCret, type="l", col=2)
+```
+
+ACF, PACF
+---------
+
+**Returns**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(BSCret)
+Pacf(BSCret)
+```
+
+**Diff. Returns**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(BSCret))
+Pacf(diff(BSCret))
+```
+
+
+ARIMA Model for Mean
+--------------------
+
+**AICC Values**
+
+```{r}
+d <- 0
+for (include.constant in c(FALSE, TRUE)) {
+    for (p in 0:4) {
+        for (q in 0:4) {
+            fit <- Arima(BSCret, c(p,d,q), method="ML",
+                         include.constant=include.constant)
+             cat("ARIMA",
+                 "(", p, ",", d, ",", q, ")",
+                 "(constant=", include.constant, ")",
+                 " : ", fit$aicc, "\n", sep="")
+        }
+    }
+}
+```
+
+
+Selected Model for Mean
+-----------------------
+
+```{r}
+(fit.mean <- Arima(BSCret, c(1, 0, 4), include.constant=FALSE))
+```
+
+
+Residuals
+---------
+
+```{r}
+resid <- as.numeric(residuals(fit.mean))
+plot(date, resid, type="l", col=3)
+```
+
+Ljung-Box Tests
+---------------
+
+```{r}
+Box.test(resid, lag=12, type="Ljung-Box", fitdf=5)
+Box.test(resid, lag=24, type="Ljung-Box", fitdf=5)
+Box.test(resid, lag=36, type="Ljung-Box", fitdf=5)
+Box.test(resid, lag=48, type="Ljung-Box", fitdf=5)
+```
+
+Residual ACF, PACF
+------------------
+
+```{r}
+par(mfrow=c(1,2))
+Acf(resid)
+Pacf(resid)
+```
+
+Sq. Residual ACF, PACF
+----------------------
+
+```{r}
+par(mfrow=c(1,2))
+Acf(resid^2)
+Pacf(resid^2)
+```
+
+
+
+GARCH Model for Shocks (Using tseries package)
+----------------------------------------------
+
+**AICC Values for ARCH Models**
+
+
+```{r}
+
+q <- 0:10
+loglik <- rep(NA, length(q))
+N <- length(resid)
+
+for (i in 1:length(q)) {
+    if (q[i] == 0) {
+        loglik[i] <- -0.5 * N * (1 + log(2 * pi * mean(resid^2)))
+    } else {
+        fit <- garch(resid, c(0,q[i]), trace=FALSE)
+        loglik[i] <- logLik(fit)
+    }
+}
+
+k <- q + 1
+aicc <- -2 * loglik  + 2 * k * N / (N - k - 1)
+
+print(data.frame(q, loglik, aicc))
+```
+
+
+**AICC Value for GARCH(1,1) Model**
+
+```{r}
+fit <- garch(resid, c(1,1), trace=FALSE)
+loglik <- logLik(fit)
+k <- 2
+aicc <- -2 * loglik  + 2 * k * N / (N - k - 1)
+
+print(data.frame(loglik, aicc))
+```
+
+
+Selected Model for Shocks
+-------------------------
+
+```{r}
+fit.var <- garch(resid, c(0,5), trace=FALSE)
+summary(fit.var)
+```
+
+
+
+
+Estimated Conditional Variances
+-------------------------------
+
+```{r}
+ht <- fit.var$fit[,1]^2 # ARIMA-ARCH
+
+par(mfrow=c(1,2))
+plot(date, BSCret, type="l", col=2)
+plot(date, ht, type="l", col=3)
+```
+
+
+ARCH Residuals
+--------------
+
+```{r}
+resid.arch <- resid / sqrt(ht)
+```
+
+**Check Normality**
+
+```{r}
+boxplot(resid.arch)
+
+hist(resid.arch)
+
+qqnorm(resid.arch, col=2)
+qqline(resid.arch, col=1, lty=2)
+```
+
+
+**Check Autocorrelation**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(resid.arch)
+Pacf(resid.arch)
+```
+
+
+**Check Autocorrelation in Volatility**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(resid.arch^2)
+Pacf(resid.arch^2)
+```
+
+
+ARIMA Forecast
+--------------
+```{r}
+forecast(fit.mean, h=1)
+
+# By hand:
+f1 <- as.numeric(forecast(fit.mean, h=1)$mean)
+
+f1 + sqrt(fit.mean$sigma2) * c(-1.96, 1.96) # 95%
+```
+
+ARIMA-ARCH Forecast
+-------------------
+
+**Get omega, alpha**
+```{r}
+coef(fit.var)
+(omega <- coef(fit.var)[[1]])
+(alpha <- coef(fit.var)[-1])
+```
+
+**Get last 5 squared residuals**
+```{r}
+resid^2 # all
+(resid^2)[60:56]
+```
+
+**Compute 1-step-ahead conditional variance**
+```{r}
+(h1 <- omega + sum(alpha * (resid^2)[60:56]))
+```
+
+
+**Construct forecast intervals**
+
+```{r}
+f1 <- as.numeric(forecast(fit.mean, h=1)$mean)
+
+# ARIMA-ARCH inteval
+f1 + sqrt(h1) * c(-1.96, 1.96) # 95%
+```
+
+
+95% Forecast Intervals
+----------------------
+
+```{r}
+ft <- fitted.values(fit.mean)
+sigma2 <- fit.mean$sigma2
+
+
+plot(date, BSCret, type="l", col=2, ylim=c(-1.25, 1.25))
+
+# ARIMA intervals
+lines(date, ft + sqrt(sigma2) * 1.96, col=3)
+lines(date, ft - sqrt(sigma2) * 1.96, col=3)
+
+# ARIMA-ARCH intervals
+lines(date, ft + sqrt(ht) * 1.96, col=4)
+lines(date, ft - sqrt(ht) * 1.96, col=4)
+
+#legend("bottomleft", inset=0.05,
+#       legend=c("Series", "ARIMA PI", "ARIMA-ARCH PI"), lty=1, col=2:4)
+```
+
+
+
+Zoomed In on Crash
+------------------
+
+```{r}
+plot(date, BSCret, type="l", col=2,
+     xlim=range(date[40:60]), ylim=c(-1.25, 1.25))
+
+# ARIMA intervals
+lines(date, ft + sqrt(sigma2) * 1.96, col=3)
+lines(date, ft - sqrt(sigma2) * 1.96, col=3)
+
+# ARIMA-ARCH intervals
+lines(date, ft + sqrt(ht) * 1.96, col=4)
+lines(date, ft - sqrt(ht) * 1.96, col=4)
+
+legend("bottomleft", inset=0.05,
+       legend=c("Series", "ARIMA PI", "ARIMA-ARCH PI"), lty=1, col=2:4)
+```
+
+
+How Many Failures?
+------------------
+
+```{r}
+# Failures rate for ARIMA:
+sum(abs(BSCret - ft) > sqrt(sigma2) * 1.96, na.rm=TRUE)
+
+# Failures for ARIMA-ARCH:
+sum(abs(BSCret - ft) > sqrt(ht) * 1.96, na.rm=TRUE)
+```

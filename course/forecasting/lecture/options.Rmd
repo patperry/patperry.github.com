@@ -1,0 +1,359 @@
+---
+title: Forecasting Time Series
+subtitle: GARCH Option Pricing
+author: Patrick Perry 
+date: April 21, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# consistent runs
+set.seed(0)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+
+Preamble
+--------
+
+```{r}
+library("e1071")     # kurtosis
+library("forecast")
+library("tseries")   # garch
+```
+
+NADAQ Series
+------------
+
+Daily Adjusted Close
+
+```{r}
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/nasdaq.csv")
+date <- as.Date(data$date)
+time <- seq_along(date)
+NASDAQ <- data$nasdaq
+```
+
+
+Log (Adj. Close)
+----------------
+
+```{r}
+log.NASDAQ <- log(NASDAQ)
+plot(date, log.NASDAQ, type="l", col=2)
+```
+
+
+ARIMA-ARCH Model
+----------------
+
+**ARIMA Part**
+
+```{r}
+# Use p = 0, q = 0 for simplicity, like Black-Scholes
+#  (using values from AICc will work better in practice)
+fit.mean <- Arima(log.NASDAQ, c(0, 1, 0), include.constant=TRUE, method="ML")
+```
+
+**ARCH Part**
+
+```{r}
+resid <- as.numeric(residuals(fit.mean))
+fit.var <- garch(resid, c(1,1), trace=FALSE)
+ht <- fit.var$fit[,1]^2
+```
+
+
+Future Trend
+------------
+
+```{r}
+drift <- coef(fit.mean)[["drift"]]
+
+# Plot 21 most recent observations
+n <- length(log.NASDAQ)
+x <- log.NASDAQ[(n-20):n]
+plot((-20):0, x, type="l", col=2, xlim=c(-20, 20),
+     xlab="time", ylab="log.NASDAQ")
+
+
+# x0 is the most recent value of log.NASDAQ
+x0 <- log.NASDAQ[n]
+
+time.future <- 0:20
+trend <- x0 + drift * time.future
+lines(time.future, trend, col=1, lty=2)
+```
+
+
+Simulating Future Paths
+-----------------------
+
+**GARCH Parameters**
+
+```{r}
+omega <- coef(fit.var)[["a0"]]
+alpha <- coef(fit.var)[["a1"]]
+beta <- coef(fit.var)[["b1"]]
+```
+
+**Today's Information**
+
+```{r}
+h0 <- ht[n]      # Conditional variance
+eps0 <- resid[n] # Shock
+```
+
+**Simulate Code**
+
+```{r}
+garch.sim <- function(nsim, eps0, h0, omega, alpha, beta)
+{
+    eps <- c(eps0, rep(NA, nsim))
+    h <- c(h0, rep(NA, nsim))
+
+    e <- c(NA, rnorm(nsim))
+
+    for (t in 2:(nsim+1)) {
+        h[t] <- omega + alpha * eps[t-1]^2 + beta * h[t-1]
+        eps[t] <- sqrt(h[t]) * e[t]
+    }
+
+    eps[-1]
+}
+```
+
+
+
+**Simulate 5000 Future Paths**
+
+```{r}
+nsim <- 20
+nrep <- 5000
+xsim <- matrix(NA, nrep, nsim + 1)
+
+for (i in 1:nrep) {
+    eps <- garch.sim(nsim, eps0, h0, omega, alpha, beta)
+    xsim[i,] <- trend + diffinv(eps)
+}
+```
+
+
+First 5 Simulated Paths
+-----------------------
+
+```{r}
+ylim <- range(c(x, as.vector(xsim[1:5,])))
+plot((-20):0, x, type="l", col=2, xlim=c(-20, 20), ylim=ylim,
+     xlab="time", ylab="log.NASDAQ")
+lines(time.future, trend, col=1, lty=2)
+
+for (i in 1:5) {
+    lines(time.future, xsim[i,], col=1)
+}
+```
+
+
+Normal Plot For 1-Day Ahead log NASDAQ
+--------------------------------------
+
+```{r}
+qqnorm(xsim[,2], col=2,
+       main=paste("Ex. Kurtosis =", round(kurtosis(xsim[,2]), 1)))
+qqline(xsim[,2], col=1, lty=2)
+```
+
+
+Normal Plot For 20-Day Ahead log NASDAQ
+--------------------------------------
+
+```{r}
+qqnorm(xsim[,21], col=2,
+       main=paste("Ex. Kurtosis =", round(kurtosis(xsim[,21]), 1)))
+qqline(xsim[,21], col=1, lty=2)
+```
+
+
+Black-Scholes
+-------------
+
+```{r}
+# price European call option
+black.scholes <- function(S, K, r, h, sigma2)
+{
+    d1 <- ((log(S/K) + (r + sigma2/2) * h)
+           / sqrt(sigma2 * h))
+    d2 <- d1 - sqrt(sigma2 * h)
+    pnorm(d1) * S - pnorm(d2) * K * exp(-r * h)
+}
+```
+
+
+One Day At the Money Price
+--------------------------
+
+**Black Scholes**
+
+```{r}
+bs.price <- black.scholes(S=exp(x0), K=exp(x0), r=drift, h=1, sigma2=fit.mean$sigma2)
+
+cat("Black-Scholes Price: ", round(bs.price, 2), "\n", sep="")
+```
+
+
+**Simulation**
+
+```{r}
+payoff <- exp(xsim[,2]) - exp(x0)
+in.money <- payoff > 0
+payoff[!in.money] <- 0
+
+hist(payoff[payoff > 0], col=2, xlab="Dollars",
+     main = paste("Nonzero Payoffs (", round(mean(in.money) * 100, 2), "%)", sep=""))
+
+
+cat("Monte-Carlo Estimate from GARCH Model: ",
+    round(mean(payoff), 2),
+    " (", round(sd(payoff) / sqrt(length(payoff)), 2), ")\n",
+    sep="")
+```
+
+
+
+20 Day At the Money Price
+--------------------------
+
+**Black Scholes**
+
+```{r}
+bs.price <-  black.scholes(S=exp(x0), K=exp(x0), r=drift, h=20, sigma2=fit.mean$sigma2)
+cat("Black-Scholes Price: ", round(bs.price, 2), "\n", sep="")
+```
+
+
+**Simulation**
+```{r}
+payoff <- exp(xsim[,21]) - exp(x0)
+in.money <- payoff > 0
+payoff[!in.money] <- 0
+
+hist(payoff[payoff > 0], col=2, xlab="Dollars",
+     main = paste("Nonzero Payoffs (", round(mean(in.money) * 100, 2), "%)", sep=""))
+
+cat("Monte-Carlo Estimate from GARCH Model: ",
+    round(mean(payoff), 2),
+    " (", round(sd(payoff) / sqrt(length(payoff)), 2), ")\n",
+    sep="")
+```
+
+
+
+
+One Day 1% Out of Money Price
+-----------------------------
+
+**Black Scholes**
+
+```{r}
+bs.price <- black.scholes(S=exp(x0), K=1.01 * exp(x0), r=drift, h=1, sigma2=fit.mean$sigma2)
+
+cat("Black-Scholes Price: ", round(bs.price, 2), "\n", sep="")
+```
+
+
+**Simulation**
+
+```{r}
+payoff <- exp(xsim[,2]) - 1.01 * exp(x0)
+in.money <- payoff > 0
+payoff[!in.money] <- 0
+
+hist(payoff[payoff > 0], col=2, xlab="Dollars",
+     main = paste("Nonzero Payoffs (", round(mean(in.money) * 100, 2), "%)", sep=""))
+
+
+cat("Monte-Carlo Estimate from GARCH Model: ",
+    round(mean(payoff), 2),
+    " (", round(sd(payoff) / sqrt(length(payoff)), 2), ")\n",
+    sep="")
+```
+
+
+
+
+20 Day 1% Out of Money Price
+---------------------------
+
+**Black Scholes**
+
+```{r}
+bs.price <-  black.scholes(S=exp(x0), K=1.01 * exp(x0), r=drift, h=20, sigma2=fit.mean$sigma2)
+cat("Black-Scholes Price: ", round(bs.price, 2), "\n", sep="")
+```
+
+
+**Simulation**
+```{r}
+payoff <- exp(xsim[,21]) - 1.01 * exp(x0)
+in.money <- payoff > 0
+payoff[!in.money] <- 0
+
+hist(payoff[payoff > 0], col=2, xlab="Dollars",
+     main = paste("Nonzero Payoffs (", round(mean(in.money) * 100, 2), "%)", sep=""))
+
+cat("Monte-Carlo Estimate from GARCH Model: ",
+    round(mean(payoff), 2),
+    " (", round(sd(payoff) / sqrt(length(payoff)), 2), ")\n",
+    sep="")
+```
+
+
+
+All Exercise Horizons
+---------------------
+
+
+```{r}
+make.plot <- function(strike, main)
+{
+    h <- 1:20
+    bs <- rep(NA, 20)
+    garch <- rep(NA, 20)
+    garch.se <- rep(NA, 20)
+
+    for (i in 1:length(h)) {
+        bs[i] <- black.scholes(S=exp(x0), K=strike, r=drift, h=h[i], sigma2=fit.mean$sigma2)
+
+        payoff <- exp(xsim[,1 + h[i]]) - strike
+        in.money <- payoff > 0
+        payoff[!in.money] <- 0
+        garch[i] <- mean(payoff)
+        garch.se[i] <- sd(payoff) / sqrt(length(payoff))
+    }
+
+    plot(h, bs, col=1, main=main, xlab="Horizon", ylab="Price", type="l",
+         ylim=range(c(bs, garch - 1.96 * garch.se, garch + 1.96 * garch.se)))
+    points(h, garch, col=2, cex=0.5)
+    lines(h, garch, col=2)
+    segments(h, garch - 1.96 * garch.se, h, garch + 1.96 * garch.se, col=2)
+    segments(h - 0.1, garch - 1.96 * garch.se, h + 0.1, garch - 1.96 * garch.se, col=2)
+    segments(h - 0.1, garch + 1.96 * garch.se, h + 0.1, garch + 1.96 * garch.se, col=2)
+    legend("topleft", inset=0.05,
+           legend=c("Black-Scholes", "GARCH(1,1)"),
+           lty=1, col=c(1,2))
+}
+
+make.plot(exp(x0), main="At the Money")
+make.plot(1.01 * exp(x0), main="1% Out of the Money")
+```
