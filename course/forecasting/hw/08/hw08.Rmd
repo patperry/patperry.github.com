@@ -1,0 +1,281 @@
+Homework 8
+==========
+*First name, Last name (replace with your name)*
+
+
+For this assignment, we will use the `forecast` and `tseries` libraries.
+
+```{r}
+# Load the libraries.  If you get an error, you will need to install
+# the packages using the "Tools > Install Packages..." command.
+
+library("forecast")
+library("tseries")
+```
+
+The dataset is the exchange rate for the Indian Rupee to 1 U.S. Dollar.
+The data is daily from July 1st, 2002 to April 8th, 2011.
+
+```{r}
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/rupee.csv")
+date <- as.Date(data$date, format="%m/%d/%Y")
+time <- 1:length(date)
+rupee <- data$rupee
+```
+
+We will work with the logs of the exchange rates:
+
+```{r}
+log.rupee <- log(rupee)
+```
+
+
+Problem 1
+---------
+
+Here is a time series plot of log.rupee, along with the ACF and PACF:
+
+```{r}
+## Add plots.
+```
+
+Here is the first difference, along with the ACF and PACF:
+
+```{r}
+## Add code to compute the first difference and make the plots.
+```
+
+Here is the second difference, along with the ACF and PACF:
+
+```{r}
+## Add code to compute the second difference and make the plots.
+```
+
+**Does the series appear to be stationary?**
+
+
+**Can you identify an ARIMA(p,d,q) model from these plots?**
+
+
+
+Problem 2
+---------
+
+Here are the AICc for all ARIMA(p,1,q) models without constant for p and q
+ranging from 0 to 2:
+
+
+```{r}
+# Add code to compute the AICc values.  You can modify the code from
+# http://ptrckprry.com/course/forecasting/lecture/nasdaq-arch.html
+# if you don't want to do this by hand.
+```
+
+**Select an ARIMA(p,1,q) model.**
+
+
+Here is code to fit the model, then compute residuals and the fitted values:
+
+```{r}
+# Add code to fit the ARIMA model.
+# fit.mean <- ???? # replace with your arima model
+```
+
+Here are the residuals, with the last 10 residuals printed out:
+```{r}
+# Uncomment:
+# resid <- residuals(fit.mean)
+# tail(resid, n=10)
+```
+
+Here are the fitted values, with the last 10 fitted values printed out:
+```{r}
+# f <- fitted.values(fit.mean)
+# tail(f, n=10)
+```
+
+Here is the one step ahead forecast and 95% forecast interval:
+
+```{r}
+# Add code to compute the forecast and interval.  You can do this
+# by hand, or you can use the "forecast" function.
+```
+
+
+Problem 3
+---------
+
+Here is a plot of the residuals:
+
+```{r}
+# Add plot of the residuals.
+```
+
+Here are an ACF and PACF of the residuals:
+
+```{r}
+# Add ACF, PACF of residuals.
+```
+
+Here are an ACF and PACF of the squared residuals:
+
+```{r}
+# Add ACF, PACF of squared residuals.
+```
+
+**Use these plots to argue that the residuals, although approximately
+uncorrelated, are not independent; instead, they show evidence of conditional
+heteroscedasticity.**
+
+
+
+Problem 4
+---------
+
+Here are the AICc values for the ARCH(q):
+
+```{r}
+# Add code to compute the AICc values for the ARCH(q) models.
+# You can modify the code from 
+# http://ptrckprry.com/course/forecasting/lecture/nasdaq-arch.html
+```
+
+Here is the AICc for the GARCH(1,1):
+
+```{r}
+# Add code to compute the AICc values for the GARCH(1,1) models.
+# You can modify the code from 
+# http://ptrckprry.com/course/forecasting/lecture/nasdaq-arch.html
+```
+
+
+Here are the summary and log likelihood of the selected model:
+
+```{r}
+# replace the ???? with code to fite the model, then uncomment
+# the other lines.
+
+# fit.var <- ????
+# summary(fit.var)
+# logLik(fit.var)
+```
+
+**Comment on the statistical significance of the parameter values of your
+selected model.**
+
+
+**Write the complete form of the ARCH or GARCH model you have selected.**
+
+
+Problem 5
+---------
+
+**Construct a 95% one step ahead forecast interval for the log exchange rate,
+based on your ARIMA-ARCH model.**
+
+```{r}
+# You will need to to this by hand.  First, get the forecast (conditional
+# mean) from the end of Problem 2.  Store this in a variable called "f1":
+# f1 <- ?????
+
+# Next, you need to determine the conditional variance, which we will store
+# in a variable called "h1".
+#
+# To do this, use the output from Problem 4 to determine the coefficients
+# (omega, alpha, etc.).  Use the output from Problem 2 to get the most
+# recent residuals (shocks).  If your model is GARCH(1,1), you will also need
+# the most recent conditional variance, which you can get from Problem 6.
+# 
+# Copy and paste the values and compute the conditional variance:
+# h1 <- ????
+
+# Finally, we compute the 95% forecast interval using the following command:
+# f1 + c(-1, 1) * 1.96 * sqrt(h1)
+```
+
+**Compare this to the interval based on the ARIMA only model from Problem 2.**
+
+
+
+Problem 6
+---------
+
+Here are the conditional variances, with the last 10 values printed out:
+
+```{r}
+# Hint: see http://ptrckprry.com/course/forecasting/lecture/nasdaq-arch.html
+
+# ht <- ????
+# tail(ht, n=10)
+```
+
+Here is a plot of the conditional variances:
+
+```{r}
+# Add plot of the conditional variances
+```
+
+**Use this plot to locate bursts of high volatility.**
+
+
+**Do these highly volatile periods agree with those found from examination of
+the time series plot of the log exchange rates themselves?**
+
+
+Problem 7
+---------
+
+Here is a time series plot which simultaneously shows the log exchange rates,
+together with the ARIMA-ARCH one-step-ahead 95% forecast intervals based on
+information available in the previous day:
+
+```{r fig.width=12, fig.height=8}
+# Uncomment the following lines to make the plot:
+
+# plot(date, log.rupee, type="l")
+# lines(date, f + 1.96 * sqrt(ht), lty=2, col=2)
+# lines(date, f - 1.96 * sqrt(ht), lty=2, col=2)
+```
+
+**Using this plot, comment on the accuracy and practical usefulness of the
+forecast intervals.**
+
+
+
+Problem 8
+---------
+
+Here is a normal probability plot of the ARCH residuals.
+
+```{r}
+# Add code to compute the arch residuals:
+# resid.arch <- ????
+
+# Now, add code to make a normal probability plot (with the qqnorm command)
+```
+
+**Does the model seem to have adequately described the leptokurtosis
+("long-tailedness") in the data?**
+
+
+Problem 9
+---------
+
+Here is a count of how many prediction interval failures there were:
+
+```{r}
+# The following command counts the number of arch residuals bigger than
+# 0.5.  Modify this command to count the number of times the prediciton
+# interval failed:
+
+# sum(abs(resid.arch) > 0.5, na.rm=TRUE)
+```
+
+The number of prediction intervals is:
+```{r}
+# Uncomment to get a count of the number of non-missing arch residuals:
+# sum(!is.na(resid.arch))
+```
+
+**What percentage of the time did the intervals fail?
+
