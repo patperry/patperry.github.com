@@ -1,0 +1,182 @@
+---
+title: Forecasting Time Series
+subtitle: Estimating Average Inflation
+author: Patrick Perry 
+date: April 28, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# Consistent runs
+set.seed(0)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+Preamble
+--------
+
+```{r}
+library("forecast")
+library("fracdiff") # for fracdiff, fdGPH
+```
+
+
+Data
+----
+
+**Raw Data**
+```{r}
+# US CPI, Jan 1947 - Jan 2015, Monthly
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/cpi.csv")
+head(data)
+tail(data)
+```
+
+**Extract Variables**
+```{r}
+date <- as.Date(data$date)
+cpi <- data$cpi
+log.cpi <- log(cpi)
+inflation <- c(NA, diff(log.cpi))
+```
+
+
+Average Inflation
+-----------------
+
+**Estimate**
+
+```{r}
+xbar <- mean(inflation, na.rm=TRUE)
+print(xbar)
+```
+
+**Standard Error (?)**
+
+```{r}
+n <- sum(!is.na(inflation))
+s <- sd(inflation, na.rm=TRUE)
+se <- s / sqrt(n)
+print(se)
+```
+
+
+**95% Confidence Interval (?)**
+```{r}
+xbar + c(-1,1) * 1.96 * se
+```
+
+
+Time Series Plot
+----------------
+
+```{r}
+plot(date, inflation, type="l", col=2)
+```
+
+
+ACF, PACF
+---------
+
+```{r, fig.width=12}
+par(mfrow=c(1,2))
+Acf(inflation, lag.max=200)
+Pacf(inflation, lag.max=200)
+```
+
+ACF, PACF of Diff.
+------------------
+
+```{r, fig.width=12}
+par(mfrow=c(1,2))
+Acf(diff(inflation), lag.max=200)
+Pacf(diff(inflation), lag.max=200)
+```
+
+
+Estimated d
+-----------
+
+**Method 1**
+
+```{r}
+## fit1 <- fracdiff(inflation) # gives an error
+```
+
+```{r}
+fit1 <- fracdiff(inflation[-1]) # remove missing value
+summary(fit1)
+```
+
+**Method 2**
+
+```{r}
+fit2 <- fdGPH(inflation[-1])
+cat("d: ", fit2$d, "\n")
+cat("SE: ", fit2$sd.reg, "\n")
+```
+
+
+**Method 3**
+
+```{r}
+fit3 <- arfima(inflation)
+summary(fit3)
+```
+
+
+Simulating ARFIMA
+-----------------
+
+```{r}
+x <- fracdiff.sim(n = 5000, d = 0.373)$series
+```
+
+**TS Plot**
+```{r}
+plot(x, type="l", col=3)
+```
+
+**ACF, PACF**
+```{r}
+par(mfrow=c(1,2))
+Acf(x, lag.max=200)
+Pacf(x, lag.max=200)
+```
+
+**Mean from Simulated Series**
+
+```{r}
+(mean.x <- mean(x))
+```
+
+**Naive SE from Simulated Series**
+
+```{r}
+sd.x <- sd(x)
+n.x <- length(x)
+(se.x <- sd.x / sqrt(n.x))
+```
+
+**Naive CI from Simulated Series**
+```{r}
+mean.x + c(-1,1) * 1.96 * se.x
+```
+
+**Invalid due to Long Memory in Series!**
+
+```{r}
+1/sqrt(n)          # With indep. observations, SE is of this order
+n^(2 * 0.373 - 1)  # With long-memory, this order instead
+```

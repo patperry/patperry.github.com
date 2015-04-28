@@ -1,0 +1,219 @@
+---
+title: Forecasting Time Series
+subtitle: Long Memory
+author: Patrick Perry 
+date: April 28, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# Consistent runs
+set.seed(0)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+Preamble
+--------
+
+```{r}
+library("forecast")
+library("fracdiff") # for fracdiff, fdGPH
+library("tseries")  # for garch
+```
+
+
+Data Sets
+---------
+
+```{r}
+# US CPI, Jan 1947 - Jan 2015, Monthly
+cpi.data <- read.csv("http://ptrckprry.com/course/forecasting/data/cpi.csv")
+cpi <- cpi.data$cpi
+log.cpi <- log(cpi)
+
+```
+
+
+```{r}
+# US Unemployment Rate, Jan 1948 - Feb 2015, Montly, Seasonally adjusted
+unemp.data <- read.csv("http://ptrckprry.com/course/forecasting/data/unemployment.csv")
+unemp <- unemp.data$unemployment
+log.unemp <- log(unemp)
+```
+
+
+```{r}
+# Russell 2000 Index, Sep 10, 1987 - Feb 11, 2015, Daily
+russell.data <- read.csv("http://ptrckprry.com/course/forecasting/data/russell.csv")
+russell <- russell.data$russell
+log.russell <- log(russell)
+```
+
+
+```{r}
+# VIX Volatility Index, Jan 2, 2004 - Apr 27, 2015, Daily
+vix.data <- read.csv("http://ptrckprry.com/course/forecasting/data/vix.csv")
+vix <- vix.data$vix.adjclose
+log.vix <- log(vix)
+logrange.vix <- log(vix.data$vix.hi) - log(vix.data$vix.lo)
+```
+
+```{r}
+# SNP500 Daily Realized Volatility,  Feb 1, 1983 - June 29, 2000
+snpvol.data <- read.csv("http://ptrckprry.com/course/forecasting/data/SNPVol.csv")
+snpvol <- snpvol.data$SNPVol
+log.snpvol <- log(snpvol)
+```
+
+
+```{r, fig.width=12}
+make.plots <- function(x, main="", lag.max=100)
+{
+    ylab <- deparse(substitute(x))
+
+    fit <- fdGPH(x)
+
+    par(mfrow=c(1,2))
+    plot(x, type="l", xlab="time", ylab=ylab, col=2, main=main)
+    mtext(paste0("d = ", round(fit$d, 2), ", SE = ", round(fit$sd.reg, 2)))
+    Acf(x, lag.max=lag.max, main=paste0("Series: ", ylab))
+}
+
+make.plots(log.russell, "Log(Russell 2000 Index), Sep 10, 1987 - Feb 11, 2015")
+make.plots(log.cpi, "Log(US CPI), Jan 1947 - Jan 2015")
+make.plots(log.vix, "Log(VIX Spot Volatility Index), Jan 2, 2004 - Apr 27, 2015")
+make.plots(log.unemp, "Log(US Unemployment), Jan 1948 - Feb 2015")
+make.plots(log.snpvol, "Log(Daily Realized S&P500 Vol), Feb 1, 1983 - June 29, 2000")
+make.plots(logrange.vix, "VIX Log Range, Jan 2, 2004 - Apr 27, 2015")
+```
+
+
+
+Dow
+---
+
+```{r}
+# DJIA, Dec 12, 1914 - Jan 28, 2015
+data.dow <- read.csv("http://ptrckprry.com/course/forecasting/data/dow.csv")
+dow <- data.dow$dow
+```
+
+**Log(Dow)**
+
+```{r}
+log.dow <- log(dow)
+plot(log.dow, type="l", col=2)
+```
+
+
+**Dow Returns (Diff Log)**
+
+```{r}
+ret.dow <- diff(log.dow)
+plot(ret.dow, type="l", col=2)
+```
+
+
+Long Memory in Dow Volatility (Squared Returns)
+-----------------------------------------------
+
+```{r}
+plot(ret.dow^2, type="l", col=2)
+Acf(ret.dow^2, lag.max=200)
+Pacf(ret.dow^2, lag.max=200)
+```
+
+**GARCH(1,1) Fit**
+
+```{r}
+garch(ret.dow, c(1,1), trace=FALSE)
+```
+
+
+
+
+Dow Returns: d = 0 or d = 1?
+----------------------------
+
+**Returns**
+
+```{r}
+plot(ret.dow, type="l", col=2)
+```
+
+```{r, fig.width=12}
+par(mfrow=c(1,2))
+Acf(ret.dow, lag.max=200)
+Pacf(ret.dow, lag.max=200)
+```
+
+**Diff. Returns**
+
+```{r}
+plot(diff(ret.dow), type="l", col=2)
+```
+
+```{r, fig.width=12}
+par(mfrow=c(1,2))
+Acf(diff(ret.dow), lag.max=200)
+Pacf(diff(ret.dow), lag.max=200)
+```
+
+
+Methods to Estimate d
+---------------------
+
+**Method 1**
+
+```{r}
+fit1 <- fracdiff(ret.dow)
+summary(fit1) # SE is probably bogus here
+```
+
+
+**Method 2**
+
+```{r}
+fit2 <- fdGPH(ret.dow) # more reliable
+cat("d: ", fit2$d, "\n")
+cat("SE: ", fit2$sd.reg, "\n")
+```
+
+**Method 3**
+
+```{r}
+## fit3 <- arfima(ret.dow) # sometimes works, sometimes crashes R
+## summary(fit3)
+```
+
+
+Simulating ARFIMA
+-----------------
+
+```{r}
+x <- fracdiff.sim(n = 5000, d = 0.0164)$series
+```
+
+**TS Plot**
+```{r}
+plot(x, type="l", col=3)
+```
+
+**ACF, PACF**
+```{r, fig.width=12}
+par(mfrow=c(1,2))
+Acf(x, lag.max=200)
+Pacf(x, lag.max=200)
+```
+
