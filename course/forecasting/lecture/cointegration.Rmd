@@ -1,0 +1,254 @@
+---
+title: Forecasting Time Series
+subtitle: Unit Root Tests & Cointegration
+author: Patrick Perry 
+date: May 5, 2015
+---
+
+```{r setup, cache=FALSE, echo=FALSE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# RNG seed
+set.seed(0)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               tidy=FALSE)
+```
+
+Preamble
+--------
+
+This lecture is based on Cowpertwait & Metcalfe,
+*Introductory Time Series with R*, Chapter 11.
+
+```{r}
+library("forecast")
+library("tseries")
+```
+
+
+Exchange Rate Data
+------------------
+
+```{r}
+# Daily exchange rates for UK pounds and the Euro, 
+# from January 2004 to December 2007, per US dollar.
+#
+xrates <- read.table("http://staff.elena.aut.ac.nz/Paul-Cowpertwait/ts/us_rates.dat",
+                     header=TRUE)
+n <- nrow(xrates)
+time <- 1:n
+
+euro <- xrates$EU
+gbp <- xrates$UK
+```
+
+
+Time Series Plots
+-----------------
+
+```{r}
+ylim <- range(euro, gbp)
+plot(time, euro, ylim=ylim, type="l", col=2, ylab="Exchange Rate", xlab="Time")
+lines(time, gbp, col=3)
+legend("topright", inset=0.025, legend=c("euro", "gbp"), col=c(2, 3), lty=2)
+```
+
+
+ACFs, PACFs for Euro
+--------------------
+
+**Euro**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(euro)
+Pacf(euro)
+```
+
+**Diff. Euro**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(euro))
+Pacf(diff(euro))
+```
+
+**2nd Diff. Euro**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(diff(euro)))
+Pacf(diff(diff(euro)))
+```
+
+
+ACFs, PACFs for GBP
+-------------------
+
+
+**Great Britain Pound**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(gbp)
+Pacf(gbp)
+```
+
+
+**Diff. Great Britain Pound**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(gbp))
+Pacf(diff(gbp))
+```
+
+**2nd Diff. Great Britain Pound**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(diff(gbp)))
+Pacf(diff(diff(gbp)))
+```
+
+
+Dickey-Fuller Test for Euro
+---------------------------
+
+**Step 1: Least Squares Fit**
+
+```{r}
+lag.euro <- c(NA, euro)[1:length(euro)]
+lsfit.euro <- lm(euro ~ lag.euro)
+summary(lsfit.euro)
+```
+
+
+**Step 2: Compute Test Statistic**
+
+```{r}
+(tau.mu.euro <- (0.997650 - 1) / (0.003219))
+```
+
+
+**Step 3: Perform Test**
+
+Use value of n to find appropriate row of Table 8.5.2:
+
+```{r}
+print(n)
+```
+
+With n > 1000, use the "n = 500" or "n = Infinity" row of the table.
+Since -2.57 < tau.mu < -0.44, it follows that 0.10 < p < 0.90.  We do not
+reject the null hypothesis; we do not have evidence that euro is *not* a
+random walk.
+
+
+Dickey-Fuller Test for GBP
+--------------------------
+
+
+**Step 1: Least Squares Fit**
+
+```{r}
+lag.gbp <- c(NA, gbp)[1:length(gbp)]
+lsfit.gbp <- lm(gbp ~ lag.gbp)
+summary(lsfit.gbp)
+```
+
+
+**Step 2: Compute Test Statistic**
+
+```{r}
+(tau.mu.gbp <- (0.994113 - 1) / (0.003510))
+```
+
+
+**Step 3: Perform Test**
+
+Use value of n to find appropriate row of Table 8.5.2:
+
+```{r}
+print(n)
+```
+
+As with Euro, since -2.57 < tau.mu < -0.44, it follows that 0.10 < p < 0.90.
+We do not reject the null hypothesis; we do not have evidence that GBP is
+*not* a random walk.
+
+
+Ad-Hoc Test for Cointegration
+-----------------------------
+
+**Least Squares Fit**
+
+```{r}
+fit <- lm(euro ~ gbp)
+summary(fit)
+```
+
+**Fit Residuals vs. Lag**
+
+```{r}
+resid <- residuals(fit)
+lag.resid <- c(NA, resid)[1:length(resid)]
+fit.resid <- lm(resid ~ lag.resid)
+summary(fit.resid)
+```
+
+
+**Perform DF Test on Residuals**
+```{r}
+(tau.mu.resid <- ((9.846e-01) - 1) / (6.503e-03))
+```
+
+Since -2.57 < tau.mu < -0.44, we have 0.10 < p < 0.90.  We cannot reject the
+null that the two series are not cointegrated.  We do not have evidence of
+co-integration.
+
+
+Phillips-Ouliaris Test for Cointegration
+----------------------------------------
+
+```{r}
+po.test(cbind(euro, gbp))
+```
+
+Note: test is sensitive to order (also true for ad-hoc procedure above).
+
+```{r}
+po.test(cbind(gbp, euro))
+```
+
+Conclusion: some weak evidence of co-integration.
+
+
+
+
+Residual Plots
+--------------
+
+**Time Series Plot**
+
+```{r}
+plot(time, resid, type="l")
+```
+
+**ACF, PACF of Residuals**
+
+```{r}
+par(mfrow=c(1,2))
+Acf(resid)
+Pacf(resid)
+```
+
