@@ -1,0 +1,150 @@
+Homework 9
+==========
+*First name, Last name (replace with your name)*
+
+For this assignment, we will use the `forecast` library.
+```{r}
+library("forecast")
+```
+
+We will analyze the `gilt` dataset:
+```{r}
+data <- read.csv("http://ptrckprry.com/course/forecasting/data/gilt.csv")
+
+long <- data$long # 20 year UK gilt interest rate
+short <- data$short # 91 day UK Treasury bill interest rate
+
+n <- nrow(data)
+time <- 1:n
+date <- as.Date(data$date)
+```
+
+
+Problem 1
+---------
+
+Here is the UK interest rate spread:
+
+```{r}
+# add code to define the spread variable (long minus short)
+
+# produce a time series plot for the spread
+```
+
+**Does the series appear to be stationary?**
+
+
+
+Here are an ACF and PACF for the spread:
+
+```{r}
+# add code for ACF and PACF of spread
+```
+
+**Based on the ACF and the PACF of the raw data, explain why an AR(1) model
+might be reasonable.**
+
+
+
+Problem 2
+---------
+
+Here we estimate an AR(1) model via least squares regression:
+
+```{r}
+# Uncomment the following command to create a lagged-version of the
+# spread variable, then use the "lm" command to perform a least
+# squares regression fit.
+
+# lag.spread <- c(NA, spread)[1:n]
+# fit.lm <- ???? # replace with appropriate call to "lm" command
+
+# Use the "summary" command to see the standard errors from the regression
+# fit.
+# summary(fit.lm) # Uncomment this line
+```
+
+
+Here is the t-statistic for testing H0: rho = 1 against H1: rho < 1:
+
+```{r}
+# add code to compute the t statistic.  You will need to copy and paste
+# the appropriate values from the "summary(fit.lm)" output.
+```
+
+Here is the p-value for the test:
+```{r}
+# Use the t-statistic to compute the pvalue.  You can either use a z table
+# to compute an approximate p-value by hand, or you can use the "pt" function
+# to compute an exact p-value, specifying "df=n-2".  (Make sure you compute
+# the correct tail area; "pt(tstat, df)" gives the probability that a t random
+# variable is less than the value "tstat".
+```
+
+**Does this p-value provide strong evidence against the random walk
+hypothesis?**
+
+
+
+**Is rho-hat significantly less than 1 at level .01?**
+
+
+
+Problem 3
+---------
+
+Here, we look at the differenced data:
+
+```{r}
+# construct a "diff.spread" variable containing the spread differences
+```
+
+Here are the ACF and PACF:
+
+```{r}
+# Add ACF, PACF of Diff. Spread
+```
+
+Here are the sample mean and sample sd
+```{r}
+# Compute and print the sample mean and sd of "diff.spread" variable.  You
+# may need to specify "na.rm=TRUE" when you use these functions.
+```
+
+**Based on the ACF, PACF, sample mean and sample standard deviation of the
+differenced data, argue that a random walk without drift might also provide a
+reasonable model for the UK interest rate spread.**
+
+
+
+Problem 4
+---------
+
+**Perform the Dickey-Fuller test (tau[mu]) of driftless random walk versis
+stationary AR(1).**
+
+
+**Compute the approximate p-value for the AR(1) hypothesis, based on the
+Dickey-Fuller table.**
+
+
+
+**Is rho hat significantly less than 1 at level .01?**
+
+
+
+**Accordingly, based on a hypothesis test at level .01, decide whether the UK
+interest rate spreads are driftless random walk or stationary AR(1).**
+
+
+**This conclusion is different from the one you arrived at in Problem 1.  What
+is the reason for the difference?**
+
+
+**Which conclusion is more justifiable, on statistical grounds?**
+
+
+
+**If you used a significance level of .05, what would you conclude from the
+Dickey-Fuller test?**
+
