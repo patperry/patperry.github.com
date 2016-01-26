@@ -1,0 +1,522 @@
+/*! HTML5 Boilerplate v4.3.0 | MIT License | http://h5bp.com/ */
+/*! Heavily modified by Patrick O. Perry */
+
+@font-face {
+    font-family: 'charterbold_italic';
+    src: url('/font/charter_bold_italic-webfont.eot');
+    src: url('/font/charter_bold_italic-webfont.eot?#iefix') format('embedded-opentype'),
+         url('/font/charter_bold_italic-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'charterbold';
+    src: url('/font/charter_bold-webfont.eot');
+    src: url('/font/charter_bold-webfont.eot?#iefix') format('embedded-opentype'),
+         url('/font/charter_bold-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'charteritalic';
+    src: url('/font/charter_italic-webfont.eot');
+    src: url('/font/charter_italic-webfont.eot?#iefix') format('embedded-opentype'),
+         url('/font/charter_italic-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+
+
+html,
+button,
+input,
+select,
+textarea {
+    color: #222;
+}
+
+html {
+    font-size: 1em;
+    line-height: 1.4;
+}
+
+::-moz-selection {
+    background: #b3d4fc;
+    text-shadow: none;
+}
+
+::selection {
+    background: #b3d4fc;
+    text-shadow: none;
+}
+
+hr {
+    display: block;
+    height: 1px;
+    border: 0;
+    border-top: 1px solid #ccc;
+    margin: 21px 0 22px 0;
+    padding: 0;
+}
+
+audio,
+canvas,
+img,
+video {
+    vertical-align: middle;
+}
+
+fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+
+textarea {
+    resize: vertical;
+}
+
+/* =======
+    Fonts
+   ======= */
+
+body {
+    /* font: 16px/26px Helvetica, Helvetica Neue, Arial; */
+    font-family: charter, Georgia, serif;
+}
+
+nav, h1, h2, h3, h4, h5, h6 {
+    font-family: charter, Georgia, serif;
+}
+
+/* ===========
+    Page Size
+   =========== */
+
+.wrapper {
+    width: 90%;
+    margin: 0 5%;
+}
+
+/* =======
+    Theme
+   ======= */
+
+.header-container {
+    /* border-bottom: 20px solid #e44d26; */
+}
+
+.footer-container,
+main aside {
+    /* border-top: 20px solid #e44d26; */
+}
+
+.header-container,
+.footer-container,
+main aside {
+    /* background: #f16529; */
+}
+
+.title {
+    /* color: white; */
+}
+
+
+
+
+/* ======
+    Menu
+   ====== */
+
+header {
+    display: -webkit-flex;
+    display: flex;
+
+    -webkit-flex-flow: row wrap;
+            flex-flow: row wrap;
+    -webkit-justify-content: space-between;
+            justify-content: space-between;
+    -webkit-align-items: baseline;
+            align-items: baseline;
+
+    margin-top: 22px;
+}
+
+.title {
+    -webkit-flex-grow: 1;
+            flex-grow: 1;
+    text-align: left;
+    margin: 0;
+}
+
+nav {
+    -webkit-flex-grow: 2;
+            flex-grow: 2;
+    font-size: 1.1875em; /* 19px */
+}
+
+nav ul {
+    display: -webkit-flex;
+    display: flex;
+    -webkit-justify-content: space-between;
+            justify-content: space-between;
+
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+nav li {
+            flex-grow: 1;
+    -webkit-flex-grow: 1;
+
+    padding: 0 22px;
+    text-align: center;
+}
+
+.home    nav .home    a,
+.reports nav .reports a,
+.code    nav .code    a,
+.courses nav .courses a,
+.blog    nav .blog    a {
+    cursor: default;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+/* ======
+    Home
+   ====== */
+
+.about {
+    display: -webkit-flex;
+    display: flex;
+
+    -webkit-flex-wrap: wrap;
+            flex-wrap: wrap;
+    -webkit-justify-content: space-between;
+            justify-content: space-between;
+
+    padding: 22px 0;
+}
+
+.about img {
+    width: 320px;
+    height: 240px;
+    min-width: 320px;
+    margin-right: 44px;
+}
+
+.about article {
+    max-width: 500px;
+}
+.about article p:first-child {
+    margin-top: 0;
+}
+
+
+/* ======
+    Code
+   ====== */
+.code dt {
+    font-family: source-sans-pro, sans;
+    font-weight: normal;
+}
+
+.code dd {
+    margin: -1.375em 0 1.375em 10em;
+}
+
+/* ======
+    Blog
+   ====== */
+
+.logo {
+    display: block;
+    margin-top: 22px;
+    margin-left: auto;
+    margin-right: auto;
+    height: 110px;
+}
+
+.blog article {
+    margin: 0 auto;
+}
+
+.blog article header {
+    -webkit-justify-content: center;
+            justify-content: center;
+}
+
+/* ========
+    Coures
+   ======== */
+.courses dt {
+    /*font-family: source-sans-pro, sans;
+    font-weight: normal; */
+}
+
+.courses dd {
+    margin: 0 0 1.375em 2.75em;
+}
+
+/* =========
+    Rscript
+   ========= */
+
+.rscript code .operator,
+.rscript code .paren {
+  color: rgb(104, 118, 135)
+}
+
+.rscript code .literal {
+  color: #990073
+}
+
+.rscript code .number {
+  color: #099;
+}
+
+.rscript code .comment {
+  color: #998;
+  font-style: italic
+}
+
+.rscript code .keyword {
+  color: #900;
+  font-weight: bold
+}
+
+.rscript code .identifier {
+  color: rgb(0, 0, 0);
+}
+
+.rscript code .string {
+  color: #d14;
+}
+
+.rscript pre {
+  margin-left: 1.375em;
+}
+
+.rscript pre code {
+  display: block;
+  padding: 6px 22px;
+  margin-top: -6px;
+  margin-bottom: -6px;
+}
+
+.rscript pre samp {
+  display: block;
+  padding: 6px 7.2px;
+  margin-top: -6px;
+  margin-bottom: -6px;
+}
+
+.rscript pre code {
+  border: 1px solid #ccc;
+  padding: 5px 0 5px 21px;
+}
+
+.rscript pre + pre {
+  margin-top: -22px;
+}
+
+.rscript article {
+    margin-left: auto;
+    margin-right: auto;
+    width: 600px;
+    padding: 0 22px;
+}
+
+/*.rscript figure {
+    margin-top: -22px;
+    margin-bottom: -16px
+}
+*/
+
+
+/* ==============
+   Custom styles
+   ============== */
+
+a,
+a:link,
+a:visited {
+    text-decoration: none;
+}
+
+a:hover,
+a:focus,
+a:active {
+    text-decoration: underline;
+}
+
+/* a[href^="/"]     { color: #222; font-weight: bold; } */
+header a[href^="/"] { color: #222; }
+
+
+h1 {
+    text-align: center;
+    font-weight: normal;
+}
+
+article {
+    max-width: 600px; /* 1 */
+    text-align: justify;
+}
+
+/* "In continuous text mark all paragraphs after the first with an indent of at
+ * least one en"
+ * http://webtypography.net/Rhythm_and_Proportion/Blocks_and_Paragraphs/2.3.2/
+ */
+article p + p {
+    text-indent: 1.375em;
+    margin-top: -1.375em;
+}
+
+
+pre {
+    overflow: visible;
+}
+
+table {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+
+/* ==========================================================================
+   Media Queries
+   ========================================================================== */
+
+@media only screen and (min-width: 960px) {
+
+/* ===============
+    Maximal Width
+   =============== */
+
+    .wrapper {
+        width: 864px; /* 960px - 10% for margins */
+        margin: 0 auto;
+    }
+}
+
+/* ==========================================================================
+   Helper classes
+   ========================================================================== */
+
+.ir {
+    background-color: transparent;
+    border: 0;
+    overflow: hidden;
+    *text-indent: -9999px;
+}
+
+.ir:before {
+    content: "";
+    display: block;
+    width: 0;
+    height: 150%;
+}
+
+.hidden {
+    display: none !important;
+    visibility: hidden;
+}
+
+.visuallyhidden {
+    border: 0;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+}
+
+.visuallyhidden.focusable:active,
+.visuallyhidden.focusable:focus {
+    clip: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    position: static;
+    width: auto;
+}
+
+.invisible {
+    visibility: hidden;
+}
+
+
+/* ==========================================================================
+   Print styles
+   ========================================================================== */
+
+@media print {
+    * {
+        background: transparent !important;
+        color: #000 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+
+    a,
+    a:visited {
+        text-decoration: underline;
+    }
+
+    a[href]:after {
+        content: " (" attr(href) ")";
+    }
+
+    abbr[title]:after {
+        content: " (" attr(title) ")";
+    }
+
+    .ir a:after,
+    a[href^="javascript:"]:after,
+    a[href^="#"]:after {
+        content: "";
+    }
+
+    pre,
+    blockquote {
+        border: 1px solid #999;
+        page-break-inside: avoid;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    tr,
+    img {
+        page-break-inside: avoid;
+    }
+
+    img {
+        max-width: 100% !important;
+    }
+
+    @page {
+        margin: 0.5cm;
+    }
+
+    p,
+    h2,
+    h3 {
+        orphans: 3;
+        widows: 3;
+    }
+
+    h2,
+    h3 {
+        page-break-after: avoid;
+    }
+}
