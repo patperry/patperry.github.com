@@ -1,0 +1,156 @@
+Homework 1: Application
+========================
+*Your Name Here, Statistics for Social Data*
+
+For the application part of the assignment, fill in the missing code blocks,
+and add text to answer the questions below. It may be helpful to refer to
+the code from the first lecture (`federalist.Rmd`). You should *not* use
+the functions from `nbinom.R` to complete this assignment.
+
+
+Preliminaries
+-------------
+
+### Computing environment
+
+This assignment uses the following packages.
+
+```{r}
+# add the other packages needed for your assignments.
+```
+
+To ensure consistent runs, set the seed before performing any analysis.
+
+```{r}
+set.seed(0)
+```
+
+
+### Data
+
+Read in the raw data.
+
+```{r}
+# add code to read in 'federalist.json'
+```
+
+Set the authorship of paper 58 to `"HAMILTON OR MADISON"` to match the
+Mosteller and Wallace analysis.
+
+```{r}
+# add code to set the authorship of paper 58
+```
+
+
+Document-term matrix
+--------------------
+
+Form a document-term matrix.
+
+```{r}
+# add code to form a document-term matrix
+```
+
+
+Fitting
+-------
+
+Mosteller and Wallace use the following feature words in their final analysis.
+
+```{r}
+feat_words <- c("upon", "also", "an", "by", "of", "on", "there", "this", "to",
+                "although", "both", "enough", "while", "whilst", "always",
+                "though", "commonly", "consequently", "considerable",
+                "according", "apt", "direction", "innovation", "language",
+                "vigor", "kind", "matter", "particularly", "probability",
+                "work")
+```
+
+For each author, and each feature word, fit a Poisson model:
+```{r}
+# add code to fit the models
+
+# Hint 1: the Poisson MLE is the word occurrence rate
+# Hint 2: use the colSums and rowSums functions on the document term matrix
+```
+
+
+Word usage rates
+----------------
+
+Plot the logarithm of Hamilton's usage rate versus Madison's usage rate
+for all feature words.
+```{r}
+# add code to make the plot
+```
+
+
+*Which feature word has the highest Hamilton usage?*
+
+*Which has the highest Madison usage?*
+
+*Which feature word has the biggest relative difference in usage rates between
+the two authors?*
+
+
+Evaluation
+----------
+
+Compute the log-probabilities of authorships for all 85 papers.
+
+```{r}
+# for each of the 85 papers, and for each author, add code to compute the
+# Poisson log-probability under the fitted model
+
+# Hint: use the dpois function with log=TRUE
+```
+
+
+```{r}
+# plot Hamilton's log probability versus Madison's log probability
+# for all 85 papers. Use a different plotting symbol for each author.
+
+# Hint: something like pch=factor(author) should work to select the
+# plotting symbol
+```
+
+Compute the log-odds of authorship for all 85 papers
+```{r}
+# add code to compute the log odds.
+```
+
+*Do you correctly identify the authorships of the known papers?*
+
+*What are your predictions for the disputed papers?*
+
+
+Discussion
+----------
+
+*Do your results agree with Mosteller and Wallace?*
+
+*This analysis makes certain modeling assumptions. What are they?*
+
+*Do you think that the assumptions are reasonable?*
+
+*How might you check the modeling assumptions?*
+
+
+Extra credit
+------------
+
+1. Stem the words when you form the document term matrix, and stem the feature
+words.
+
+2. Fit a prior distribution to the word usage rates.
+
+3. (Difficult) Use the fitted prior to compute posterior estimates of the word usage rates
+for both authors. Use these posterior estimates to compute the final log odds.
+
+
+Session information
+-------------------
+
+```{r}
+sessionInfo()
+```

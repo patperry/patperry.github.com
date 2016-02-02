@@ -1,0 +1,858 @@
+```{r setup, cache=FALSE, echo=FALSE, global.par=TRUE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               highlight=FALSE, tidy=FALSE, warning=FALSE, message=FALSE)
+```
+
+Case Study: The Federalist Papers
+=================================
+*Patrick O. Perry, NYU Stern School of Business*
+
+
+Overview
+--------
+
+We will replicate the analysis performed by Mosteller and Wallace (1963) to
+determine the authorhips of the 15 disputed Federalist Papers.
+
+
+Preliminaries
+-------------
+
+### Computing environment
+
+We will use the following R packages. You can see the exact version numbers
+and the rest of my R session information at the end of this document.
+
+```{r}
+library("dplyr")
+library("jsonlite")
+library("Matrix")
+library("NLP")
+library("openNLP")
+library("SnowballC")
+library("tm")
+```
+
+We will also use some code for fitting negative binomial models.
+
+```{r}
+source("nbinom.R") # 'nbinom.R' must be in the working directory
+```
+
+To ensure consistent runs, we set the seed before performing any
+analysis:
+
+```{r}
+set.seed(0)
+```
+
+
+### Data
+
+The raw text for the Federalist Papers is available from
+[Project Gutenberg][pg]. I have processed the raw text to produce a
+newline-delimited JavaScript Object Notation (JSON) data file with one record
+for each of the 85 papers, named [federalist.json][federalist]. 
+
+We can read this file into R using the `stream_in` function from the
+`jsonlite` package.
+
+```{r}
+fed <- jsonlite::stream_in(file("federalist.json"))
+```
+
+Each record has `r length(fed)` fields.
+
+```{r}
+names(fed)
+```
+
+The authorships reported by the Project Gutenenberg versions are as follow.
+
+```{r}
+fed %>% group_by(author) %>% summarize(count = n())
+```
+
+The text of the paper is stored in the `"text"` field.
+
+The Project Gutenberg version of the Federalist Papers attributes paper
+No.&nbsp;58 to Madison, but Mosteller and Wallace consider this paper to have
+disputed authorship. We will follow Mosteller and Wallace in our subsequent
+analysis.
+
+```{r}
+fed$author[fed$paper_id == 58] <- "HAMILTON OR MADISON"
+```
+
+
+Exploratory analysis
+--------------------
+
+### Sentence length
+
+First we break each document into sentences.
+
+```{r}
+# use the 'openNLP' maximum entropy sentence annotator
+ator <- openNLP::Maxent_Sent_Token_Annotator(language="en")
+
+ntext <- nrow(fed)
+sents <- vector("list", ntext)
+
+for (i in seq_len(ntext)) {
+    # convert the text to a 'String' object to annotate it
+    s <- NLP::as.String(fed$text[[i]])
+
+    # compute the sentence boundaries
+    spans <- NLP::annotate(s, ator)
+    nsent <- length(spans)
+    sents[[i]] <- as.character(s[spans])
+}
+```
+
+Next, we compute the lengths (in words) of the sentences.
+```{r}
+# use the 'wordpunct' word tokenizer
+scan <- NLP::wordpunct_tokenizer
+
+sents_nword <- vector("list", length(sents))
+for (i in seq_along(sents)) {
+    nsent <- length(sents[[i]])
+    nword <- vector("numeric", nsent)
+    for (j in seq_len(nsent)) {
+        # convert the sentence to a string object
+        s <- NLP::as.String(sents[[i]][[j]])
+
+        # tokenize the sentence into words
+        spans <- scan(s)
+
+        # determine the sentence lengths
+        nword[[j]] <- length(spans)
+    }
+    sents_nword[[i]] <- nword
+}
+```
+
+For convenience, we store the sentence data in a data frame.
+```{r}
+sents <- data_frame(paper_id = rep(fed$paper_id, sapply(sents, length)),
+                    text = c(sents, recursive=TRUE),
+                    nword = c(sents_nword, recursive=TRUE))
+```
+
+We can see that both Hamilton and Madison have similar sentence length
+averages and standard deviations:
+```{r}
+# compute the sentence lengths for each author
+(sents %>% left_join(fed, by="paper_id")
+       %>% group_by(author)
+       %>% summarize(n(), mean(nword), sd(nword)))
+
+```
+The distributions of the sentence lenghts are also nearly identical.
+
+```{r, fig.width=12}
+h_sent_lens <- (sents %>% left_join(fed, by="paper_id")
+                      %>% filter(author == "HAMILTON"))$nword
+m_sent_lens <- (sents %>% left_join(fed, by="paper_id")
+                      %>% filter(author == "MADISON"))$nword
+
+par(mfrow=c(1,2))
+cols <- paste0(palette(), "44")
+
+# First Plot
+#par(mar=c(3, 4, 1, 0.5) + .1)
+hist(m_sent_lens, freq=FALSE, col=cols[2], 40, main="",
+     xlab="Sentence Length")
+hist(h_sent_lens, freq=FALSE, col=cols[1], 40, add=TRUE)
+
+# Second Plot
+hist(log10(m_sent_lens), freq=FALSE, col=cols[2], 40, main="",
+     xlab=expression(Log[10]("Sentence Length")))
+hist(log10(h_sent_lens), freq=FALSE, col=cols[1], 40, add=TRUE)
+```
+
+```{r, echo=FALSE, fig.height=0.5}
+# Legend
+par(mar=c(0,0,0,0))
+plot(c(0,1), c(0,1), type="n", axes=FALSE)
+legend(0.5, 0.5, xjust=0.5, yjust=0.5, horiz=TRUE,
+       fill=cols[1:2], legend=c("Hamilton", "Madison"))
+```
+
+Here are quantile plots for the two authors.
+```{r, fig.width=12}
+cols <- paste0(palette(), "AA")
+
+par(mfrow=c(1,2))
+hf <- (seq_along(h_sent_lens) - 0.5) / length(h_sent_lens)
+hq <- sort(h_sent_lens)
+mf <- (seq_along(m_sent_lens) - 0.5) / length(m_sent_lens)
+mq <- sort(m_sent_lens)
+
+# First Plot
+plot(c(0, 1), range(hq, mq), type="n", xlab="Fraction",
+     ylab="Sentence Length")
+lines(hf, hq, col=cols[1], lwd=3)
+lines(mf, mq, col=cols[2], lwd=3)
+
+# Second Plot
+plot(c(0, 1), log10(range(hq, mq)), type="n", xlab="Fraction",
+     ylab=expression(Log[10]("Sentence Length")))
+lines(hf, log10(hq), col=cols[1], lwd=3)
+lines(mf, log10(mq), col=cols[2], lwd=3)
+```
+
+```{r, echo=FALSE, fig.height=0.5}
+# Legend
+par(mar=c(0,0,0,0))
+plot(c(0,1), c(0,1), type="n", axes=FALSE)
+legend(0.5, 0.5, xjust=0.5, yjust=0.5, horiz=TRUE,
+       fill=cols[1:2], legend=c("Hamilton", "Madison"))
+```
+
+In light of these similarities, it is unlikely that sentence length will be a
+good feature for discriminating between Hamilton and Madison.
+
+
+### Word usage
+
+
+To look at the word usages of the two authors, we form a "Document Term
+Matrix", with rows corresponding to texts (papers) and columns
+corresponding to words.  Entry *(i,j)* of the matrix will store the
+number of times that word *j* appears in text *i*.
+
+```{r}
+stem <- function(words) {
+    words <- as.character(words)
+    long <- nchar(words) > 4
+    words[long] <- SnowballC::wordStem(words[long], language="porter")
+    words
+}
+corpus <- VCorpus(VectorSource(fed$text))
+control <- list(tolower = TRUE, removePunctuation = TRUE,
+                removeNumbers = TRUE, stemming = stem,
+                wordLengths=c(1, Inf))
+dtm <- DocumentTermMatrix(corpus, control=control)
+```
+
+The `DocumentTermMatrix` returns a sparse matrix in `simple_triplet_matrix`
+format, but for efficiency and consistency, I prefer to work sparse matrices
+in `sparseMatrix` format. The following code performs a conversion between
+these two types.
+
+```{r}
+dtm <- sparseMatrix(dtm$i, dtm$j, x = dtm$v, dim=dim(dtm),
+                     dimnames=dimnames(dtm))
+```
+
+To compare word usage behavior, we normalize by the length of the document,
+to get the rate of occurrence for each word.
+```{r}
+rate <- dtm / rowSums(dtm)
+```
+
+Here are side-by-side boxplots comparing the usage rates for six different
+words:
+
+```{r, fig.height=8, fig.width=12}
+aut <- c("HAMILTON", "MADISON")
+par(mfrow=c(2,3))
+for (w in c("by", "from", "to", "war", "tax", "upon")) {
+    boxplot(1000 * rate[,w] ~ fed$author, subset = fed$author %in% aut,
+            ylab="Frequency / 1K Words", main=w)
+}
+```
+
+We can see that for certain words ("by", "to", "upon"), usage rates very
+widely between the two authors. This suggests that these words can be used to
+discriminate between Hamilton and Madison. We can also see that for other
+words ("war", "tax"), it is likely that most of the variability in usage is
+due to topic, not to author. We should avoid using these context-dependent
+words when determining paper authorship.
+
+
+
+Modeling word occurrence
+------------------------
+
+### Purpose
+
+We first need a probabilistic model for word occurrences in the texts.
+Mosteller and Wallace suggest using either a Poisson or Negative Binomial
+model. 
+
+
+### Fitting
+
+The following code fits negative binomial models for each author and
+word.
+
+```{r}
+author <- c("HAMILTON", "MADISON")
+word <- colnames(dtm)
+
+usage <- 
+do(data_frame(author) %>% group_by(author), { # for each author:
+    # extract the texts written by the author
+    x <- dtm[fed$author == .$author,]
+
+    # compute text lenghts
+    n <- rowSums(x)
+    offset <- log(n)
+
+    do(data_frame(word) %>% group_by(word), { # for each word:
+        # fit a negative binomial model for the word
+        y <- x[,.$word]
+        fit <- nbinom_fit(y, n)
+
+        # compute the deviance for heterogeneity = 1
+        dev1 <- nbinom_pdev(y, offset, 0)
+        fit$hetero1_deviance <- dev1
+
+        # return the results as a data frame (required by the 'do' command)
+        as.data.frame(fit)
+    }) %>% ungroup()
+}) %>% ungroup()
+
+# compute the chi squared statistics for H0 : hetero = 1 vs. H1: hetero < 1
+usage <-
+usage %>% mutate(chisq_hetero = ifelse(heterogeneity > 1,
+                                       deviance - hetero1_deviance,
+                                       hetero1_deviance - deviance),
+                 pval_hetero = 1 - pchisq(chisq_hetero, df=1))
+```
+
+### Diagnostic checks
+
+
+To check the validity of the word occurrence models, we first segment the
+texts into blocks of about 200 words.
+
+```{r}
+block_size <- 200
+paper_id <- integer()
+block_text <- list()
+nblock <- 0
+
+for (i in seq_len(nrow(fed))) {
+    # convert the text to a 'String' object to annote it
+    s <- NLP::as.String(fed$text[[i]])
+
+    # find the word boundaries
+    spans <- NLP::wordpunct_tokenizer(s)
+    nword <- length(spans)
+
+    # form blocks of 'block_size' words
+    end <- 0
+    while (end < nword) {
+        # find the block boundaries
+        start <- end + 1
+        end <- min(start + block_size, nword)
+        block_span <- Span(spans[start]$start, spans[end]$end)
+
+        # store the block in the 'block_text' array
+        nblock <- nblock + 1
+        block_text[[nblock]] <- as.character(s[block_span])
+        paper_id[[nblock]] <- i
+    }
+}
+
+block <- data_frame(block_id = seq_len(nblock), paper_id = paper_id,
+                    text = block_text)
+dtm_block <- DocumentTermMatrix(VCorpus(VectorSource(block$text)),
+                                control=control)
+dtm_block <- sparseMatrix(dtm_block$i, dtm_block$j, x = dtm_block$v,
+                          dim=dim(dtm_block), dimnames=dimnames(dtm_block))
+```
+
+Here are the observed and expected counts under Hamilton's Poisson and
+negative binomial models for a few selected words.
+
+```{r}
+
+# investigate goodness of fit for Hamilton, for a few selected words
+
+h <- (block %>% left_join(fed, by="paper_id")
+            %>% filter(author == "HAMILTON"))$block_id
+x <- dtm_block[h,]
+n <- rowSums(x)
+
+for (w in c("an", "any", "may", "upon", "his", "can", "offic", "senat",
+            "would")) {
+    y <- x[, w]
+
+    fit <- usage %>% filter(author == "HAMILTON" & word == w)
+
+    table <-
+    do(data_frame(k=0:6) %>% group_by(k),
+        data_frame(observed=sum(y == .$k),
+                   pois_expected=sum(dpois(.$k, fit$pois_rate * n)),
+                   nbinom_expected=sum(dnbinom(.$k, size=1/(fit$heterogeneity),
+                                               mu = fit$rate * n)))
+    ) %>% ungroup()
+
+
+    cat("\nWord: '", w, "'\n", sep="")
+    cat("Rate/1K: ", 1000 * fit$pois_rate, "\n", sep="")
+    cat("Log(Heterogeneity): ", log(fit$heterogeneity), "\n", sep="")
+    print(table %>% mutate(pois_expected=round(pois_expected, 1),
+                           nbinom_expected=round(nbinom_expected, 1)))
+}
+
+```
+
+For most of these examples, the fit looks reasonable. For some words, ("his",
+"senat", "would"), the negative binomial is a much better fit than the Poisson
+model.
+
+
+Here is a more comprehensive goodness of fit evaluation. For each word, we care the expected
+counts with the observed counts, then compute a Pearson chi-squared goodness of fit statistic. 
+
+```{r}
+gof <-
+do(data_frame(author) %>% group_by(author), {
+    # extract the blocks for the current author
+    a <- .$author
+    i <- (block %>% left_join(fed, by="paper_id")
+                %>% filter(author == a))$block_id
+    x <- dtm_block[i,]
+    n <- rowSums(x)
+    do(data_frame(word=colnames(x)) %>% group_by(word), {
+        # extract the observed block counts and the fit for the current word
+        w <- .$word
+        y <- x[, w]
+        fit <- usage %>% filter(author == a & word == w)
+
+        if (nrow(fit) == 0) {
+            # if a word appears in the block, but not in the original
+            # corpus, skip it
+            chisq <- NA
+            df <- NA
+            pval <- NA
+            pois_chisq <- NA
+            pois_df <- NA
+            pois_pval <- NA
+        } else {
+            # otherwise, perform two chi squared goodness of fit tests, one
+            # for the negative binomial model, and one for the Poisson
+            # model
+
+            # fitted parameters:
+            mu <- fit$rate * n
+            size <- 1/fit$heterogeneity
+            pois_mu <- fit$pois_rate * n
+
+            # In the loop below, we perform a chi squared goodness of
+            # fit test by comparing the observed numbers of 0's, 1's,
+            # etc, to the number observed. We bin the counts so that
+            # the expected value is at least 5 in each cell.
+
+            # keep track of the remaining tail mass
+            ntail <- length(y)
+
+            # start out with one bin
+            expected <- numeric(1)
+            pois_expected <- numeric(1)
+            observed <- numeric(1)
+            nbin <- 1
+
+            k <- 0
+            while (ntail >= 5) {
+                # compute the observed and expected number of seeing
+                # the value 'k'
+                o <- sum(y == k)
+                if (!is.finite(size)) {
+                    e <- sum(dpois(k, mu))
+                } else {
+                    e <- sum(dnbinom(k, size=size, mu=mu))
+                }
+                pe <- sum(dpois(k, pois_mu))
+
+                # add the counts to the last bin
+                observed[nbin] <- observed[nbin] + o
+                expected[nbin] <- expected[nbin] + e
+                pois_expected[nbin] <- pois_expected[nbin] + pe
+
+                # update the tail mass
+                ntail <- ntail - o
+
+                # create a new bin if the observed count is at least 5
+                if (observed[nbin] >= 5 && ntail >= 5) {
+                    nbin <- nbin + 1
+                    observed[nbin] <- 0
+                    expected[nbin] <- 0
+                    pois_expected[nbin] <- 0
+                }
+
+                # advance to the next value of 'k'
+                k <- k + 1
+            }
+            # assign the remaining mass to the last bin
+            o <- ntail
+            if (!is.finite(size)) {
+                e <- sum(1 - ppois(k - 1, mu))
+            } else {
+                e <- sum(1 - pnbinom(k - 1, size=size, mu=mu))
+            }
+            pe <- sum(1 - ppois(k - 1, pois_mu))
+
+            observed[nbin] <- observed[nbin] + o
+            expected[nbin] <- expected[nbin] + e
+            pois_expected[nbin] <- pois_expected[nbin] + pe
+
+            # compute the chi squared statistics; the degrees of freedom
+            # here are approximate (cf. Chernoff and Lehmann, 1954)
+            chisq <-  sum((observed - expected)^2 / expected)
+            df <- nbin - 1
+            pval <- ifelse(df <= 0, NA, 1 - pchisq(chisq, df))
+
+            pois_chisq <-  sum((observed - pois_expected)^2 / pois_expected)
+            pois_df <- nbin - 1
+            pois_pval <- ifelse(pois_df <= 0, NA,
+                                1 - pchisq(pois_chisq, pois_df))
+        }
+        data_frame(chisq, df, pval, pois_chisq, pois_df, pois_pval)
+    }) %>% ungroup()
+}) %>% ungroup()
+```
+
+Here are histograms of the goodness of fit p-values for both models:
+```{r, fig.width=12}
+par(mfrow=c(1,2))
+hist(gof$pval, 50, main="Negative Binomial Fit")
+hist(gof$pois_pval, 50, main="Poisson Fit")
+```
+
+Ideally, these histograms should be completely flat (the p-value should be
+uniformly distributed on `[0,1]` if the model fits). The skewed shape is due
+to the ad-hoc choice for the degrees of freedom.  The skewness indicates that
+these goodness of fit tests are overly optimistic. 
+
+
+Here are the words with poor fits under the Poisson model, but reasonable fits
+under the negative binomial model:
+
+```{r}
+print(n=20, gof %>% filter(pois_pval < .05 & pval > .05)
+                %>% arrange(pois_pval))
+```
+
+
+Here are the words with the worst goodness of fits under the negative binomial model:
+
+```{r}
+print(n=20, gof %>% arrange(pval))
+```
+
+
+Filtering context-dependent words
+---------------------------------
+
+We define a "context-dependent" word as a word with heterogeneity above 1 for either
+author. We can perform a likelihood ratio test for heteterogeneity. The null hypothesis is "heterogeneity <= 1 for either Hamilton or Madison". Small p-values corresponds to strong evidence of neutrality. 
+
+Here are the p-values ("context dependence") for the words:
+
+```{r, fig.width=12}
+par(mfrow=c(1,2))
+palette(brewer.pal(5, "RdYlBu"))
+
+with(usage %>% filter(heterogeneity <= 1e-6),
+    plot(log10(rate), pval_hetero,
+         main="heterogeneity = 0",
+         xlab=expression(log[10](rate)),
+         ylab="context dependence",
+         col=cut(pval_hetero,
+                 breaks=c(0, .01, .05, .10, .20, 1),
+                 include.lowest=TRUE),
+          cex=0.5))
+
+with(usage %>% filter(heterogeneity > 1e-6),
+    plot(log10(rate), log(heterogeneity),
+         main="heterogeneity > 0",
+         xlab=expression(log[10](rate)),
+         ylab=expression(log(heterogeneity)),
+         col=cut(pval_hetero,
+                 breaks=c(0, .01, .05, .10, .20, 1),
+                 include.lowest=TRUE),
+         cex=0.5))
+```
+
+
+Here are the words with the smallest p-values (strongest evidence of neutrality):
+
+```{r}
+print(usage %>% group_by(word)
+            %>% summarize(chisq = sum(chisq_hetero))
+            %>% mutate(pval = (1 - pchisq(chisq, 1)))
+            %>% filter(pval < .01)
+            %>% arrange(pval), n = 50)
+```
+
+
+Here are the words with the largest p-values (weakest evidence of neutrality):
+
+```{r}
+print(usage %>% group_by(word)
+            %>% summarize(chisq = sum(chisq_hetero))
+            %>% mutate(pval = (1 - pchisq(chisq, 1)))
+            %>% arrange(chisq), n = 20)
+```
+
+
+Filtering non-distinctive words
+-------------------------------
+
+We want to filter out the words with similar usages for both authors. To test
+for the "distinctiveness" of a word, we perform a likelihood ratio test. The
+null (pooled) model uses the same rate and heterogeneity for both authors; the
+alternative model uses author-specific rates and heterogeneities.
+
+
+```{r}
+
+x <- dtm[fed$author %in% author,]
+n <- rowSums(x)
+offset <- log(n)
+usage_pool <-
+do(data_frame(word) %>% group_by(word), { # for each word
+    y <- x[, .$word]
+    fit <- nbinom_fit(y, n) # fit a joint model
+    as.data.frame(fit)
+})
+
+# computed 
+usage_pool <-
+usage_pool %>%
+    left_join(on = "word",
+        usage %>% group_by(word)
+              %>% summarize(chisq_hetero_tot = sum(chisq_hetero),
+                            pval_hetero_tot = 1 - pchisq(chisq_hetero_tot, 1),
+                            deviance_unpool = sum(deviance))) %>%
+    ungroup()
+
+
+usage_pool <-
+usage_pool %>% mutate(chisq_diff = deviance - deviance_unpool,
+                      pval_diff = 1 - pchisq(chisq_diff, df=2))
+       
+```
+
+
+The words that discriminate are those where the rates or the heterogeneities
+differ between the two authors:
+
+```{r, fig.width=12}
+
+usage_h <- usage %>% filter(author == "HAMILTON")
+usage_m <- usage %>% filter(author == "MADISON")
+
+feature <- 
+(usage_pool %>% select(word, pval_hetero = pval_hetero_tot, pval_diff)
+            %>% left_join(on = "word",
+                          usage_h %>% select(word,
+                                             rate_h = rate,
+                                             hetero_h = heterogeneity))
+            %>% left_join(on = "word",
+                          usage_m %>% select(word,
+                                             rate_m = rate,
+                                             hetero_m = heterogeneity)))
+
+par(mfrow=c(1,2))
+palette(brewer.pal(5, "RdYlBu"))
+
+with(feature, {
+    plot(log(rate_h), log(rate_m), cex=0.5,
+         col=cut(pval_diff,
+                 breaks=c(0, .01, .05, .10, .20, 1),
+                 include.lowest=TRUE))
+
+    plot(log(1 + hetero_h), log10(1 + hetero_m), cex=0.5,
+         col=cut(pval_diff,
+                 breaks=c(0, .01, .05, .10, .20, 1),
+                 include.lowest=TRUE))
+})
+```
+
+After filtering context-sensitive and non-discriminating words, we
+are left with the following list:
+
+```{r}
+print(n=50, feature %>% filter(pval_hetero < .01 & pval_diff < .01)
+                    %>% arrange(pval_diff))
+```
+
+
+Prior elicitation
+-----------------
+
+We use the neutral words (not just the feature words), to elicit a prior
+for the word-specific parameters
+```{r}
+feature <-
+feature %>% mutate(s = rate_h + rate_m,
+                   t = ifelse(s == 0, NA, rate_h / s),
+                   z_h = log(1 + hetero_h), # MW use log(1 + rate * hetero)
+                   z_m = log(1 + hetero_m),
+                   x = z_h + z_m,
+                   y = ifelse(x == 0, NA, z_h / x))
+
+par(mfrow=c(1,1))
+with(feature %>% filter(pval_hetero < .01), {
+    plot(sqrt(1000 * s), t, cex=0.5, xlim=c(0, 6))
+})
+
+ntot <- sum(dtm[fed$author %in% c("HAMILTON", "MADISON"),])
+s <- seq(.2/1000, 6^2 / 1000, len=200)
+lines(sqrt(1000 * s), 0.5 + 2 * sqrt(0.5 * (1 - 0.5) / (ntot * s)))
+lines(sqrt(1000 * s), 0.5 - 2 * sqrt(0.5 * (1 - 0.5) / (ntot * s)))
+lines(sqrt(1000 * s), 0.55 + 2 * sqrt(0.55 * (1 - 0.55) / (ntot * s)),
+      lty=2)
+lines(sqrt(1000 * s), 0.45 - 2 * sqrt(0.45 * (1 - 0.45) / (ntot * s)),
+      lty=2)
+
+
+```
+
+Here are the analogues of Mosteller and Wallace's preferred priors:
+```{r}
+# s = rate_h + rate_m,
+# t = ifelse(s == 0, NA, rate_h / s),
+
+palette(brewer.pal(6, "Set1"))
+with(feature %>% filter(pval_hetero < .01), {
+    hist(t, prob=TRUE, 20, col="gray", border="white")
+    u <- seq(0, 1, len=100)
+    lines(u, dbeta(u, 10, 10), col=2)
+})
+```
+
+```{r}
+# y = ifelse(x == 0, NA, z_h / x))
+
+palette(brewer.pal(6, "Set1"))
+with(feature %>% filter(pval_hetero < .01), {
+    hist(y, prob=TRUE, 20, col="gray", border="white")
+    u <- seq(0, 1, len=100)
+    lines(u, dbeta(u, 1.2, 1.2), col=2)
+})
+```
+
+```{r}
+# z_h = log(1 + hetero_h)
+# z_m = log(1 + hetero_m)
+# x = z_h + z_m
+
+palette(brewer.pal(6, "Set1"))
+with(feature %>% filter(pval_hetero < .01), {
+    # from https://en.wikipedia.org/wiki/Gamma_distribution#Maximum_likelihood_estimation
+    s <- log(mean(x[x > 0])) - mean(log(x[x > 0]))
+    shape <- (3 - s + sqrt((s - 3)^2 + 24 * s)) / (12 * s)
+    m <- mean(x)
+    scale <- m / shape
+    hist(x, prob=TRUE, 20,
+         main=paste0("mean = ", round(m, 2), ", shape = ", round(shape, 2)),
+         col="gray", border="white")
+    u <- seq(0, 2, len=100)
+    lines(u, dgamma(u, shape=shape, scale=scale), col=2)
+})
+```
+
+After determining the prior, Mosteller and Wallace re-fit the model parameters
+for each author. Unfortunately, I didn't have time to implement this step. In
+the remainder of the analysis, we will use the original estimates, note the
+posterior modes.
+
+
+Evaluation
+----------
+
+Now, we are ready to evaluate the log odds, the difference in log
+probabilities between Hamilton and Madison, under the two fitted models.
+
+```{r}
+log_odds <-
+with(feature %>% filter(pval_hetero < .01 & pval_diff < .01
+                        & rate_h > 0 & rate_m > 0), {
+    n <- rowSums(dtm)
+    y <- dtm[,word]
+    log_odds <- matrix(0, nrow(y), ncol(y))
+    colnames(log_odds) <- word
+    rownames(log_odds) <- fed$paper_id
+
+    for (j in seq_len(ncol(y))) {
+        # Hamilton
+        mu_h = n * rate_h[j]
+        size_h <- 1/hetero_h[j]
+        if (is.finite(size_h)) {
+            lp_h <- dnbinom(y[,j], mu=mu_h, size=size_h, log=TRUE)
+        } else {
+            lp_h <- dpois(y[,j], mu_h, log=TRUE)
+        }
+
+        # Madison
+        mu_m = n * rate_m[j]
+        size_m <- 1/hetero_m[j]
+        if (is.finite(size_m)) {
+            lp_m <- dnbinom(y[,j], mu=mu_m, size=size_m, log=TRUE)
+        } else {
+            lp_m <- dpois(y[,j], mu_m, log=TRUE)
+        }
+
+        log_odds[,j] <- lp_h - lp_m
+    }
+    log_odds
+})
+```
+
+Here are the log odds of Hamilton authorship for all 85 papers.
+
+```{r}
+fed %>% select(paper_id, author) %>% mutate(log_odds = rowSums(log_odds))
+```
+
+Discussion
+----------
+
+Our analysis is incomplete, because we did not use the priors for the word
+parameters in computing the authorship log odds. We also failed to investigate
+the strength and effect of dependence between the word counts. In light of
+this, our results are only preliminary.
+
+
+For most of the papers, our analysis agrees with Mosteller and Wallace. We
+have very strong evidence of Madison authorship for most of the papers. For
+Paper No.&nbsp;55, we found weak evidence of Hamilton authorship; Mosteller
+and Wallace found weak evidence of Madison authorship for this paper.
+
+
+One notable difference between our analyis and Mosteller and Wallace's is that
+we do the feature selection completely automatically. This allows our approach
+to easily adapt to other datasets and applications, but it is also a potential
+weakness, because our tests for neutrality might be less reliable than
+Mosteller and Wallace's subjective judgments.
+
+
+Session information
+-------------------
+
+```{r}
+sessionInfo()
+```
+
+[pg]: http://www.gutenberg.org/ebooks/18
+[federalist]: http://ptrckprry.com/course/ssd/data/federalist.json
+
