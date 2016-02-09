@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<title>Segmenting Text</title>
+
+<script type="text/javascript">
+window.onload = function() {
+  var imgs = document.getElementsByTagName('img'), i, img;
+  for (i = 0; i < imgs.length; i++) {
+    img = imgs[i];
+    // center an image if it is the only element of its parent
+    if (img.parentElement.childElementCount === 1)
+      img.parentElement.style.textAlign = 'center';
+  }
+};
+</script>
+
+
+
+
+
+<style type="text/css">
+body, td {
+   font-family: sans-serif;
+   background-color: white;
+   font-size: 13px;
+}
+
+body {
+  max-width: 800px;
+  margin: auto;
+  padding: 1em;
+  line-height: 20px;
+}
+
+tt, code, pre {
+   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+
+h1 {
+   font-size:2.2em;
+}
+
+h2 {
+   font-size:1.8em;
+}
+
+h3 {
+   font-size:1.4em;
+}
+
+h4 {
+   font-size:1.0em;
+}
+
+h5 {
+   font-size:0.9em;
+}
+
+h6 {
+   font-size:0.8em;
+}
+
+a:visited {
+   color: rgb(50%, 0%, 50%);
+}
+
+pre, img {
+  max-width: 100%;
+}
+pre {
+  overflow-x: auto;
+}
+pre code {
+   display: block; padding: 0.5em;
+}
+
+code {
+  font-size: 92%;
+  border: 1px solid #ccc;
+}
+
+code[class] {
+  background-color: #F8F8F8;
+}
+
+table, td, th {
+  border: none;
+}
+
+blockquote {
+   color:#666666;
+   margin:0;
+   padding-left: 1em;
+   border-left: 0.5em #EEE solid;
+}
+
+hr {
+   height: 0px;
+   border-bottom: none;
+   border-top-width: thin;
+   border-top-style: dotted;
+   border-top-color: #999999;
+}
+
+@media print {
+   * {
+      background: transparent !important;
+      color: black !important;
+      filter:none !important;
+      -ms-filter: none !important;
+   }
+
+   body {
+      font-size:12pt;
+      max-width:100%;
+   }
+
+   a, a:visited {
+      text-decoration: underline;
+   }
+
+   hr {
+      visibility: hidden;
+      page-break-before: always;
+   }
+
+   pre, blockquote {
+      padding-right: 1em;
+      page-break-inside: avoid;
+   }
+
+   tr, img {
+      page-break-inside: avoid;
+   }
+
+   img {
+      max-width: 100% !important;
+   }
+
+   @page :left {
+      margin: 15mm 20mm 15mm 10mm;
+   }
+
+   @page :right {
+      margin: 15mm 10mm 15mm 20mm;
+   }
+
+   p, h2, h3 {
+      orphans: 3; widows: 3;
+   }
+
+   h2, h3 {
+      page-break-after: avoid;
+   }
+}
+</style>
+
+
+
+</head>
+
+<body>
+<h1>Segmenting Text</h1>
+
+<p><em>Patrick O. Perry, NYU Stern School of Business</em></p>
+
+<h2>Preliminaries</h2>
+
+<h3>Java</h3>
+
+<p>We will use the <code>coreNLP</code> package, which requires the latest version of Java.
+To get this working On Mac OS, you need to run the following steps:</p>
+
+<ol>
+<li><p>Install the <a href="http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html">latest Java SE Development Kit</a></p></li>
+<li><p>Re-configure the R java settings by running the following command from
+<code>Terminal.app</code>:</p>
+
+<pre><code>R CMD javareconf
+</code></pre></li>
+<li><p>In R, install or re-install <code>rJava</code> <em>from source</em>:</p>
+
+<pre><code>install.packages(&#39;rJava&#39;,,&#39;http://www.rforge.net/&#39;)
+</code></pre></li>
+<li><p>Then, in a terminal, run</p>
+
+<pre><code>sudo ln -f -s $(/usr/libexec/java_home)/jre/lib/server/libjvm.dylib /usr/lib
+</code></pre></li>
+</ol>
+
+<p>These instructions were culled from
+<a href="http://stackoverflow.com/a/32544358">stackoverflow.com/a/32544358</a>
+and
+<a href="http://stackoverflow.com/a/31039105">stackoverflow.com/a/31039105</a>.</p>
+
+<h3>Computing environment</h3>
+
+<p>We will use the following R packages.</p>
+
+<pre><code class="text">library(&quot;dplyr&quot;)
+library(&quot;jsonlite&quot;)
+library(&quot;coreNLP&quot;)
+library(&quot;Matrix&quot;)
+library(&quot;NLP&quot;)
+library(&quot;openNLP&quot;)
+library(&quot;tm&quot;)
+</code></pre>
+
+<p>To ensure consistent runs, we set the seed before performing any
+analysis.</p>
+
+<pre><code class="text">set.seed(0)
+</code></pre>
+
+<h3>Data</h3>
+
+<p>We will be using the <a href="http://www.anc.org/data/masc/">Manually Annotated Sub-Corpus (MASC)</a> from the
+<a href="http://www.anc.org/">American National Corpus</a>:</p>
+
+<pre><code class="text">masc &lt;- jsonlite::stream_in(file(&quot;anc-masc.json&quot;), verbose=FALSE)   # raw text
+sent &lt;- jsonlite::stream_in(file(&quot;anc-masc-s.json&quot;), verbose=FALSE) # sentence boundaries
+</code></pre>
+
+<h2>Collocations</h2>
+
+<p>Form all unigram and bigram counts.</p>
+
+<pre><code class="text">BigramTokenizer &lt;- function(x) {
+    unlist(lapply(NLP::ngrams(NLP::words(x), 2), paste, collapse = &quot; &quot;),
+           use.names = FALSE)
+}
+
+corpus &lt;- VCorpus(VectorSource(masc$text))
+control &lt;- list(tolower = TRUE, removePunctuation = TRUE,
+                removeNumbers = TRUE, wordLengths=c(1, Inf))
+
+dtm &lt;- DocumentTermMatrix(corpus, control=c(control))
+unigram &lt;- sparseMatrix(dtm$i, dtm$j, x = dtm$v, dim=dim(dtm),
+                        dimnames=dimnames(dtm))
+
+dtm &lt;- DocumentTermMatrix(corpus,
+                          control=c(control, tokenize = BigramTokenizer))
+bigram &lt;- sparseMatrix(dtm$i, dtm$j, x = dtm$v, dim=dim(dtm),
+                       dimnames=dimnames(dtm))
+</code></pre>
+
+<h3>Example: &ldquo;new york&rdquo;</h3>
+
+<pre><code class="text">(n12 &lt;- sum(bigram[,&quot;new york&quot;]))
+</code></pre>
+
+<pre><code>[1] 124
+</code></pre>
+
+<pre><code class="text">(n1 &lt;- sum(unigram[,&quot;new&quot;]))
+</code></pre>
+
+<pre><code>[1] 794
+</code></pre>
+
+<pre><code class="text">(n2 &lt;- sum(unigram[,&quot;york&quot;]))
+</code></pre>
+
+<pre><code>[1] 149
+</code></pre>
+
+<pre><code class="text">(n &lt;- sum(unigram))
+</code></pre>
+
+<pre><code>[1] 477813
+</code></pre>
+
+<pre><code class="text"># null hypothesis: P(york|new) = P(york|-new)
+p = n2 / n
+dev0 &lt;- -2 * (dbinom(n12, n1, p, log=TRUE)
+              + dbinom(n2 - n12, n - n1, p, log=TRUE))
+
+# alternative hypothesis: P(york|new) &gt; P(york|-new)
+p1 &lt;- n12/n1
+p2 &lt;- (n2 - n12)/(n - n1)
+if (p1 &lt;= p2) {
+    dev1 &lt;- dev0
+} else {
+    dev1 &lt;- -2 * (dbinom(n12, n1, p1, log=TRUE)
+                  + dbinom(n2 - n12, n - n1, p2, log=TRUE))
+}
+
+(chisq &lt;- dev0 - dev1)
+</code></pre>
+
+<pre><code>[1] 1472.869
+</code></pre>
+
+<pre><code class="text">(pval &lt;- pchisq(chisq, df=1, lower.tail = FALSE))
+</code></pre>
+
+<pre><code>[1] 3.063207e-322
+</code></pre>
+
+<h3>All collocations</h3>
+
+<pre><code class="text">ug &lt;- colnames(unigram)
+bg &lt;- colnames(bigram)
+chisq &lt;- numeric(length(bg))
+n12 &lt;- colSums(bigram)
+w1 &lt;- numeric(length(bg))
+w2 &lt;- numeric(length(bg))
+
+words &lt;- strsplit(bg, &quot; &quot;)
+words &lt;- lapply(words, function(w) if (length(w) == 2) w else c(NA, NA))
+
+w &lt;- matrix(match(unlist(words), colnames(unigram)), ncol=2, byrow=TRUE)
+
+ok &lt;- !is.na(w[,1]) &amp; !is.na(w[,2])
+n1 &lt;- rep(NA, length(bg))
+n2 &lt;- rep(NA, length(bg))
+n1[ok] &lt;- colSums(unigram)[w[ok,1]]
+n2[ok] &lt;- colSums(unigram)[w[ok,2]]
+n &lt;- sum(unigram)
+
+colloc &lt;- data_frame(bigram=bg, n1, n2, n12)
+
+colloc$chisq &lt;- with(colloc, {
+    # null hypothesis: P(w2|w1) = P(w2|-w1)
+    p = n2 / n
+    dev0 &lt;- -2 * (dbinom(n12, n1, p, log=TRUE)
+                  + dbinom(n2 - n12, n - n1, p, log=TRUE))
+
+    # alt hypothesis: P(w2|w1) &gt; P(w2|-w1)
+    p1 &lt;- n12/n1
+    p2 &lt;- (n2 - n12)/(n - n1)
+    dev1 &lt;- -2 * (dbinom(n12, n1, p1, log=TRUE)
+                  + dbinom(n2 - n12, n - n1, p2, log=TRUE))
+
+    ifelse(p1 &lt;= p2, 0, dev0 - dev1)
+})
+
+colloc$pval &lt;- pchisq(colloc$chisq, df=1, lower.tail = FALSE)
+</code></pre>
+
+<pre><code class="text">print(n=100, colloc %&gt;% arrange(desc(chisq)))
+</code></pre>
+
+<pre><code>Source: local data frame [236,292 x 6]
+
+                                    bigram    n1    n2  n12     chisq
+1                                   of the 12003 26107 2804 4483.7424
+2                                   in the  8358 26107 2173 3874.0079
+3                             jack sparrow   464   231  222 3132.8576
+4                            united states   221   275  179 2611.6980
+5                                  i think  6664   729  415 2583.9190
+6                                    to be 13510  2521  754 2438.7978
+7                                    tz id   150   295  150 2310.9826
+8                                hong kong   172   127  127 2147.3793
+9                                 going to   525 13510  376 2073.7134
+10                                  if you  1406  4777  381 1916.3666
+11                                  i dont  6664   717  337 1915.5133
+12                                 will be  1651  2521  321 1795.3247
+13                                    i am  6664   407  264 1742.4935
+14                               have been  2349   762  243 1659.6422
+15                                  it was  4059  3042  410 1587.5769
+16                                   it is  4059  5352  497 1567.0414
+17                                  on the  3408 26107  887 1552.6807
+18                                you know  4777   895  287 1549.4260
+19                                has been   964   762  190 1544.3022
+20                         elizabeth swann   163    96   93 1525.8272
+21                                new york   794   149  124 1472.8689
+22                             will turner  1651   149  135 1448.8616
+23                               more than  1000   664  173 1406.2400
+24                                the same 26107   300  269 1370.6457
+25                                would be  1213  2521  235 1304.2399
+26                               las vegas    69    68   64 1203.2063
+27                                 this is  2781  5352  363 1182.1943
+28                                 want to   385 13510  233 1157.6046
+29                                 we have  2475  2349  257 1130.1066
+30                                  do you  1309  4777  257 1104.5186
+31                          postal service   140   257   82 1074.1557
+32                                 able to   151 13510  149 1043.0517
+33                                   a lot 10456   168  150 1035.1055
+34                                   i was  6664  3042  373 1015.3806
+35                              davy jones    58   117   58  999.7227
+36                               there are  1115  2316  185  993.2465
+37                               dont know   717   895  131  985.5995
+38                               the first 26107   582  302  984.2828
+39                          vice president    87   373   73  983.2494
+40                                  i mean  6664   257  153  966.8531
+41                                 you can  4777  1172  226  961.2615
+42                                 to make 13510   534  234  957.5691
+43                                at least  2229   108   95  944.6468
+44                           jeffery clark    68    79   55  944.2783
+45                                  let me   222  1303  103  918.6760
+46                               thank you   142  4777  114  912.2991
+47                                  one of  1454 12003  323  904.4365
+48                                there is  1115  5352  217  878.6147
+49                   contenttype textplain    46    46   44  872.8536
+50                                  at the  2229 26107  536  854.4836
+51                             ian malcolm    58    65   48  851.7200
+52                              alan grant    74   126   55  850.7177
+53                                does not   297  2263  115  842.1561
+54                                    as a  2885 10456  395  836.4532
+55                                  to get 13510   678  234  824.0167
+56                                 part of   238 12003  153  823.2677
+57                             gen horatio    42    40   40  814.9630
+58                                  can be  1172  2521  167  813.1067
+59                             rather than   121   664   73  806.3949
+60                                   a few 10456   176  131  804.8453
+61  charsetusascii contenttransferencoding    39    43   39  785.6280
+62                                  out of  1037 12003  258  781.7230
+63                textplain charsetusascii    46    39   39  773.0086
+64                         horatio sanchez    40    55   40  766.5895
+65                                 kind of   154 12003  124  764.5321
+66                           sonoma county    66    74   46  763.7113
+67                                  we can  2475  1172  159  763.2663
+68                                 for the  4247 26107  734  762.4947
+69                              the united 26107   221  170  756.3593
+70                                   to do 13510  1309  290  746.9904
+71                                 did not   514  2263  120  735.9569
+72                             health care   154   145   56  730.4872
+73                                  i have  6664  2349  277  730.1319
+74                               they were  1508  1420  141  725.9595
+75            messageid javamailevansthyme    38    35   35  715.5208
+76                                 such as   346  2885  111  707.1761
+77                               should be   405  2521  112  705.1471
+78                                 need to   404 13510  174  703.8359
+79                                  he was  1984  3042  190  702.5083
+80                                 be able  2521   151   86  699.2811
+81                               make sure   534   273   74  697.9953
+82                                from the  2196 26107  484  695.3911
+83                                   et al    50    94   42  695.2869
+84                                  may be   527  2521  119  694.9955
+85                              hong kongs   172    43   43  693.7095
+86                                    is a  5352 10456  488  691.8020
+87                         flying dutchman    59    38   36  660.9524
+88                          cutler beckett    35    57   35  660.4837
+89                             lord cutler    58    35   35  658.6070
+90             contenttransferencoding bit    43   121   40  655.7139
+91                               number of   195 12003  123  654.3068
+92                                   but i  2018  6664  244  653.7842
+93                                 as well  2885   750  130  649.9114
+94                                  do not  1309  2263  142  640.7530
+95                              subject re   287    69   48  635.8111
+96                                 look at   287  2229   92  633.1685
+97                                 he said  1984   931  122  628.9446
+98                               there was  1115  3042  145  623.4056
+99                          president bush   373    86   51  620.9797
+100                              trying to   125 13510  103  620.2518
+..                                     ...   ...   ...  ...       ...
+Variables not shown: pval (dbl)
+</code></pre>
+
+<h2>Hand-written sentence splitter</h2>
+
+<p>The Stanford CoreNLP library uses a hand-written sentence splitter with
+special cases for abbreviations like &ldquo;Mr.&rdquo;, &ldquo;Ph.D.&rdquo;, and </p>
+
+<pre><code class="text"># initialize the coreNLP library; this fails unless you&#39;ve already run downloadCoreNLP
+coreNLP::initCoreNLP(annotators=c(&quot;tokenize&quot;, &quot;ssplit&quot;))
+
+# annotate the sentence
+s_core &lt;-
+do(masc %&gt;% group_by(text_id), {
+    anno &lt;- coreNLP::annotateString(.$text)
+
+    # extract the token boundaries
+    tok &lt;- coreNLP::getToken(anno)
+
+    # determine the sentence boundaries
+    (tok %&gt;% group_by(sentence)
+         %&gt;% summarize(start = min(CharacterOffsetBegin),
+                       end = max(CharacterOffsetEnd)))
+}) %&gt;% ungroup()
+</code></pre>
+
+<h2>Trained supervised sentence splitter</h2>
+
+<pre><code class="text">ator &lt;- openNLP::Maxent_Sent_Token_Annotator(language=&quot;en&quot;)
+s_open &lt;-
+do(masc %&gt;% group_by(text_id), {
+    s &lt;- NLP::as.String(.$text)
+
+    spans &lt;- NLP::annotate(s, ator)
+    s_open &lt;- as.data.frame(spans)
+}) %&gt;% ungroup()
+</code></pre>
+
+<h2>Trained unsupervised sentence splitter</h2>
+
+<p>The Punkt sentence splitter available in Python, but not in R. Here is
+code using NLTK 3.0:</p>
+
+<pre><code>import json
+import nltk.data
+
+sent_detector = nltk.data.load(&#39;tokenizers/punkt/english.pickle&#39;)
+infile = open(&#39;anc-masc.json&#39;, &#39;r&#39;)
+outfile = open(&#39;anc-masc-punkt.json&#39;, &#39;w&#39;)
+
+for line in infile:
+    obj = json.loads(line)
+    spans = sent_detector.span_tokenize(obj[&#39;text&#39;])
+    for i,s in enumerate(spans):
+        json.dump({&#39;text_id&#39;: obj[&#39;text_id&#39;],
+                   &#39;sentence&#39;: i,
+                   &#39;begin&#39;: s[0],
+                   &#39;end&#39;: s[1]}, outfile)
+        outfile.write(&#39;\n&#39;)
+
+outfile.close()
+infile.close()
+</code></pre>
+
+<p>We can read the results from Punkt into R.</p>
+
+<pre><code class="text">punkt &lt;- jsonlite::stream_in(file(&quot;anc-masc-punkt.json&quot;), verbose=FALSE)
+
+# punkt gives [begin,end), in 0-based indices, and does not include trailing
+# punctuation. The following command converts to 1-based indexing and
+# [begin,end] span conventions.
+s_punkt &lt;- punkt %&gt;% mutate(begin = begin + 1)
+</code></pre>
+
+<h2>Error rate comparison</h2>
+
+<pre><code class="text">loss &lt;- function(truth, est) {
+    tp &lt;- length(intersect(truth, est)) # true positives
+    fp &lt;- length(est) - tp # false positives
+    fn &lt;- length(truth) - tp # false negatives
+    tn &lt;- max(truth) - (tp + fp + fn) # true negatives
+
+    precision &lt;- tp / (tp + fp)
+    recall &lt;- tp / (tp + fn)
+    data_frame(precision, recall)
+}
+
+results &lt;-
+do(sent %&gt;% group_by(text_id), {
+    tid &lt;- .$text_id[[1]]
+    truth &lt;- .$end
+    est_core &lt;- (s_core %&gt;% filter(text_id == tid))$end
+    est_open &lt;- (s_open %&gt;% filter(text_id == tid))$end
+    est_punkt &lt;- (s_punkt %&gt;% filter(text_id == tid))$end
+
+    l_core &lt;- loss(truth, est_core)
+    l_open &lt;- loss(truth, est_open)
+    l_punkt &lt;- loss(truth, est_punkt)
+    data_frame(text_id = tid,
+               precision_core = l_core$precision, recall_core = l_core$recall,
+               precision_open = l_open$precision, recall_open = l_open$recall,
+               precision_punkt = l_punkt$precision, recall_punkt = l_punkt$recall)
+}) %&gt;% ungroup()
+</code></pre>
+
+<pre><code class="text">(results %&gt;% left_join(masc, on=&quot;text_id&quot;)
+         %&gt;% group_by(mode, class)
+         %&gt;% summarize(precision_core = median(precision_core),
+                       precision_open = median(precision_open),
+                       precision_punkt = median(precision_punkt),
+                       recall_core = median(recall_core),
+                       recall_open = median(recall_open),
+                       recall_punkt = median(recall_punkt)))
+</code></pre>
+
+<pre><code>Source: local data frame [19 x 8]
+Groups: mode
+
+      mode             class precision_core precision_open precision_punkt
+1   spoken  court-transcript      0.9888920      0.9792127       0.9869341
+2   spoken debate-transcript      0.9902222      0.9905660       0.9875362
+3   spoken      face-to-face      1.0000000      1.0000000       0.9846154
+4   spoken         telephone      1.0000000      1.0000000       0.0000000
+5  written              blog      0.9259259      0.9489796       0.9250000
+6  written             email      0.9000000      0.6666667       0.8153409
+7  written            essays      0.7871300      0.7993529       0.7754242
+8  written           ficlets      0.9516129      0.9627451       0.9546436
+9  written           fiction      0.9955357      0.9981343       0.9911111
+10 written         govt-docs      0.9601329      0.9701493       0.9532374
+11 written             jokes      0.8746439      0.9222670       0.8739516
+12 written           journal      0.9803922      0.9677419       0.9583333
+13 written           letters      1.0000000      0.9473684       0.9375000
+14 written      movie-script      0.9235276      0.8868550       0.9130547
+15 written         newspaper      1.0000000      1.0000000       0.8750000
+16 written       non-fiction      0.9178571      0.9446494       0.9370370
+17 written         technical      0.9682922      0.9537179       0.9442857
+18 written     travel-guides      1.0000000      0.9640288       0.9655172
+19 written           twitter      0.8560688      0.8378870       0.9348486
+Variables not shown: recall_core (dbl), recall_open (dbl), recall_punkt (dbl)
+</code></pre>
+
+<pre><code class="text">with(results %&gt;% left_join(masc, on=&quot;text_id&quot;)
+             %&gt;% filter(mode == &quot;written&quot; &amp; class != &quot;email&quot;), {
+    boxplot(recall_core, recall_open, recall_punkt,
+            names=c(&quot;CoreNLP&quot;, &quot;OpenNLP&quot;, &quot;Punkt&quot;))
+})
+</code></pre>
+
+<p><img src="data:image/png;base64,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" title="plot of chunk unnamed-chunk-13" alt="plot of chunk unnamed-chunk-13" style="display: block; margin: auto;" /></p>
+
+<h2>Common difficult cases</h2>
+
+<h2>Session information</h2>
+
+<pre><code class="text">sessionInfo()
+</code></pre>
+
+<pre><code>R version 3.2.3 (2015-12-10)
+Platform: x86_64-apple-darwin13.4.0 (64-bit)
+Running under: OS X 10.10.5 (Yosemite)
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+attached base packages:
+[1] methods   stats     graphics  grDevices utils     datasets  base     
+
+other attached packages:
+[1] tm_0.6-2           openNLP_0.2-5      NLP_0.1-8          Matrix_1.2-3      
+[5] coreNLP_0.4-1      jsonlite_0.9.16    dplyr_0.4.1        RColorBrewer_1.1-2
+[9] knitr_1.12.3      
+
+loaded via a namespace (and not attached):
+ [1] Rcpp_0.11.5         magrittr_1.5        lattice_0.20-33    
+ [4] R6_2.0.1            stringr_0.6.2       plyr_1.8.1         
+ [7] tools_3.2.3         parallel_3.2.3      grid_3.2.3         
+[10] plotrix_3.6-1       DBI_0.3.1           lazyeval_0.1.10    
+[13] assertthat_0.1      digest_0.6.8        rJava_0.9-8        
+[16] openNLPdata_1.5.3-2 formatR_1.1         codetools_0.2-14   
+[19] evaluate_0.8        slam_0.1-32         XML_3.98-1.3       
+</code></pre>
+
+</body>
+
+</html>

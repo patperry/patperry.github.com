@@ -1,0 +1,332 @@
+```{r setup, cache=FALSE, echo=FALSE, global.par=TRUE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 80)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               highlight=FALSE, tidy=FALSE, warning=FALSE, message=FALSE)
+```
+
+Segmenting Text
+===============
+*Patrick O. Perry, NYU Stern School of Business*
+
+
+Preliminaries
+-------------
+
+### Java
+
+We will use the `coreNLP` package, which requires the latest version of Java.
+To get this working On Mac OS, you need to run the following steps:
+
+1. Install the [latest Java SE Development Kit][java-sdk]
+
+2. Re-configure the R java settings by running the following command from
+`Terminal.app`:
+
+        R CMD javareconf
+
+3. In R, install or re-install `rJava` *from source*:
+
+        install.packages('rJava',,'http://www.rforge.net/')
+
+4. Then, in a terminal, run
+
+        sudo ln -f -s $(/usr/libexec/java_home)/jre/lib/server/libjvm.dylib /usr/lib
+
+These instructions were culled from
+[stackoverflow.com/a/32544358](http://stackoverflow.com/a/32544358)
+and
+[stackoverflow.com/a/31039105](http://stackoverflow.com/a/31039105).
+
+
+### Computing environment
+
+We will use the following R packages.
+
+```{r}
+library("dplyr")
+library("jsonlite")
+library("coreNLP")
+library("Matrix")
+library("NLP")
+library("openNLP")
+library("tm")
+```
+
+
+To ensure consistent runs, we set the seed before performing any
+analysis.
+
+```{r}
+set.seed(0)
+```
+
+
+### Data
+
+We will be using the [Manually Annotated Sub-Corpus (MASC)][masc] from the
+[American National Corpus][anc]:
+
+```{r}
+masc <- jsonlite::stream_in(file("anc-masc.json"), verbose=FALSE)   # raw text
+sent <- jsonlite::stream_in(file("anc-masc-s.json"), verbose=FALSE) # sentence boundaries
+```
+
+
+Collocations
+------------
+
+Form all unigram and bigram counts.
+
+```{r}
+BigramTokenizer <- function(x) {
+    unlist(lapply(NLP::ngrams(NLP::words(x), 2), paste, collapse = " "),
+           use.names = FALSE)
+}
+
+corpus <- VCorpus(VectorSource(masc$text))
+control <- list(tolower = TRUE, removePunctuation = TRUE,
+                removeNumbers = TRUE, wordLengths=c(1, Inf))
+
+dtm <- DocumentTermMatrix(corpus, control=c(control))
+unigram <- sparseMatrix(dtm$i, dtm$j, x = dtm$v, dim=dim(dtm),
+                        dimnames=dimnames(dtm))
+
+dtm <- DocumentTermMatrix(corpus,
+                          control=c(control, tokenize = BigramTokenizer))
+bigram <- sparseMatrix(dtm$i, dtm$j, x = dtm$v, dim=dim(dtm),
+                       dimnames=dimnames(dtm))
+```
+
+### Example: "new york"
+
+```{r}
+(n12 <- sum(bigram[,"new york"]))
+(n1 <- sum(unigram[,"new"]))
+(n2 <- sum(unigram[,"york"]))
+(n <- sum(unigram))
+
+# null hypothesis: P(york|new) = P(york|-new)
+p = n2 / n
+dev0 <- -2 * (dbinom(n12, n1, p, log=TRUE)
+              + dbinom(n2 - n12, n - n1, p, log=TRUE))
+
+# alternative hypothesis: P(york|new) > P(york|-new)
+p1 <- n12/n1
+p2 <- (n2 - n12)/(n - n1)
+if (p1 <= p2) {
+    dev1 <- dev0
+} else {
+    dev1 <- -2 * (dbinom(n12, n1, p1, log=TRUE)
+                  + dbinom(n2 - n12, n - n1, p2, log=TRUE))
+}
+
+(chisq <- dev0 - dev1)
+(pval <- pchisq(chisq, df=1, lower.tail = FALSE))
+```
+
+
+### All collocations
+
+```{r}
+ug <- colnames(unigram)
+bg <- colnames(bigram)
+chisq <- numeric(length(bg))
+n12 <- colSums(bigram)
+w1 <- numeric(length(bg))
+w2 <- numeric(length(bg))
+
+words <- strsplit(bg, " ")
+words <- lapply(words, function(w) if (length(w) == 2) w else c(NA, NA))
+
+w <- matrix(match(unlist(words), colnames(unigram)), ncol=2, byrow=TRUE)
+
+ok <- !is.na(w[,1]) & !is.na(w[,2])
+n1 <- rep(NA, length(bg))
+n2 <- rep(NA, length(bg))
+n1[ok] <- colSums(unigram)[w[ok,1]]
+n2[ok] <- colSums(unigram)[w[ok,2]]
+n <- sum(unigram)
+
+colloc <- data_frame(bigram=bg, n1, n2, n12)
+
+colloc$chisq <- with(colloc, {
+    # null hypothesis: P(w2|w1) = P(w2|-w1)
+    p = n2 / n
+    dev0 <- -2 * (dbinom(n12, n1, p, log=TRUE)
+                  + dbinom(n2 - n12, n - n1, p, log=TRUE))
+
+    # alt hypothesis: P(w2|w1) > P(w2|-w1)
+    p1 <- n12/n1
+    p2 <- (n2 - n12)/(n - n1)
+    dev1 <- -2 * (dbinom(n12, n1, p1, log=TRUE)
+                  + dbinom(n2 - n12, n - n1, p2, log=TRUE))
+
+    ifelse(p1 <= p2, 0, dev0 - dev1)
+})
+
+colloc$pval <- pchisq(colloc$chisq, df=1, lower.tail = FALSE)
+```
+
+```{r}
+print(n=100, colloc %>% arrange(desc(chisq)))
+```
+
+
+Hand-written sentence splitter
+------------------------------
+
+The Stanford CoreNLP library uses a hand-written sentence splitter with
+special cases for abbreviations like "Mr.", "Ph.D.", and 
+
+```{r}
+# initialize the coreNLP library; this fails unless you've already run downloadCoreNLP
+coreNLP::initCoreNLP(annotators=c("tokenize", "ssplit"))
+
+# annotate the sentence
+s_core <-
+do(masc %>% group_by(text_id), {
+    anno <- coreNLP::annotateString(.$text)
+
+    # extract the token boundaries
+    tok <- coreNLP::getToken(anno)
+
+    # determine the sentence boundaries
+    (tok %>% group_by(sentence)
+         %>% summarize(start = min(CharacterOffsetBegin),
+                       end = max(CharacterOffsetEnd)))
+}) %>% ungroup()
+```
+
+
+Trained supervised sentence splitter
+------------------------------------
+
+```{r}
+ator <- openNLP::Maxent_Sent_Token_Annotator(language="en")
+s_open <-
+do(masc %>% group_by(text_id), {
+    s <- NLP::as.String(.$text)
+
+    spans <- NLP::annotate(s, ator)
+    s_open <- as.data.frame(spans)
+}) %>% ungroup()
+
+```
+
+
+Trained unsupervised sentence splitter
+--------------------------------------
+
+The Punkt sentence splitter available in Python, but not in R. Here is
+code using NLTK 3.0:
+
+```
+import json
+import nltk.data
+
+sent_detector = nltk.data.load('tokenizers/punkt/english.pickle')
+infile = open('anc-masc.json', 'r')
+outfile = open('anc-masc-punkt.json', 'w')
+
+for line in infile:
+    obj = json.loads(line)
+    spans = sent_detector.span_tokenize(obj['text'])
+    for i,s in enumerate(spans):
+        json.dump({'text_id': obj['text_id'],
+                   'sentence': i,
+                   'begin': s[0],
+                   'end': s[1]}, outfile)
+        outfile.write('\n')
+
+outfile.close()
+infile.close()
+```
+
+We can read the results from Punkt into R.
+```{r}
+punkt <- jsonlite::stream_in(file("anc-masc-punkt.json"), verbose=FALSE)
+
+# punkt gives [begin,end), in 0-based indices, and does not include trailing
+# punctuation. The following command converts to 1-based indexing and
+# [begin,end] span conventions.
+s_punkt <- punkt %>% mutate(begin = begin + 1)
+```
+
+Error rate comparison
+---------------------
+
+```{r}
+loss <- function(truth, est) {
+    tp <- length(intersect(truth, est)) # true positives
+    fp <- length(est) - tp # false positives
+    fn <- length(truth) - tp # false negatives
+    tn <- max(truth) - (tp + fp + fn) # true negatives
+
+    precision <- tp / (tp + fp)
+    recall <- tp / (tp + fn)
+    data_frame(precision, recall)
+}
+
+results <-
+do(sent %>% group_by(text_id), {
+    tid <- .$text_id[[1]]
+    truth <- .$end
+    est_core <- (s_core %>% filter(text_id == tid))$end
+    est_open <- (s_open %>% filter(text_id == tid))$end
+    est_punkt <- (s_punkt %>% filter(text_id == tid))$end
+    
+    l_core <- loss(truth, est_core)
+    l_open <- loss(truth, est_open)
+    l_punkt <- loss(truth, est_punkt)
+    data_frame(text_id = tid,
+               precision_core = l_core$precision, recall_core = l_core$recall,
+               precision_open = l_open$precision, recall_open = l_open$recall,
+               precision_punkt = l_punkt$precision, recall_punkt = l_punkt$recall)
+}) %>% ungroup()
+```
+
+```{r}
+(results %>% left_join(masc, on="text_id")
+         %>% group_by(mode, class)
+         %>% summarize(precision_core = median(precision_core),
+                       precision_open = median(precision_open),
+                       precision_punkt = median(precision_punkt),
+                       recall_core = median(recall_core),
+                       recall_open = median(recall_open),
+                       recall_punkt = median(recall_punkt)))
+```
+
+```{r}
+with(results %>% left_join(masc, on="text_id")
+             %>% filter(mode == "written" & class != "email"), {
+    boxplot(recall_core, recall_open, recall_punkt,
+            names=c("CoreNLP", "OpenNLP", "Punkt"))
+})
+```
+
+
+Common difficult cases
+----------------------
+
+
+
+Session information
+-------------------
+
+```{r}
+sessionInfo()
+```
+
+
+[anc]: http://www.anc.org/
+[java-sdk]: http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
+[masc]: http://www.anc.org/data/masc/
