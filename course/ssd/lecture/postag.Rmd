@@ -1,0 +1,258 @@
+```{r setup, cache=FALSE, echo=FALSE, global.par=TRUE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 100)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               highlight=FALSE, tidy=FALSE, warning=FALSE, message=FALSE)
+```
+
+Part-of-Speech Tagging
+======================
+*Patrick O. Perry, NYU Stern School of Business*
+
+
+### Computing environment
+
+
+We will use the following R packages.
+
+```{r}
+library("jsonlite")
+library("coreNLP")
+library("Matrix")
+library("NLP")
+library("openNLP")
+library("stringi")
+```
+
+To ensure consistent runs, we set the seed before performing any
+analysis.
+
+```{r}
+set.seed(0)
+```
+
+
+### Data
+
+We will analyze a subset of [Yelp Academic Dataset][yelp-academic]
+corresponding to reviews of 500 restaurants nearest to Columbia University (as
+of October 15, 2012). To get this data, take the following steps:
+
+1. Visit [Yelp's developer page][manage_api_keys] to create a Yelp API
+   account and log in to your account.
+
+2. Visit [Yelp's academic dataset page][yelp-academic], then click on the
+   "Download the dataset" button (in the "Access" section). The button
+   will only be visible after logging in to your Yelp API Account.  
+
+At this point, you should have a file called `yelp_academic_dataset.json.gz`.
+Run the `01_make_json.py` and `02_subset_nyc.py` scripts, available from the
+course webpage, to generate `yelp-nyc-business.json` and
+`yelp-nyc-review.json`. You will need Python version 3.4 or later. 
+
+
+After downloading and pre-processing the data, you can load it into R. First,
+a random sample of 50 businesses.
+
+```{r}
+nbus <- 50
+business <- jsonlite::stream_in(file("yelp-nyc-business.json"), verbose=FALSE)
+business <- business[sample(nrow(business), nbus),]
+business <- business[order(business$name),] # sort alphabetically
+```
+
+Next, the reviews of those businesses.
+
+```{r}
+review <- jsonlite::stream_in(file("yelp-nyc-review.json"), verbose=FALSE)
+review <- review[review$business_id %in% business$business_id,]
+```
+
+
+
+
+Tagging with CoreNLP
+--------------------
+
+```{r}
+coreNLP::initCoreNLP(annotators=c("tokenize", "ssplit", "pos"))
+
+adj_core <- vector("list", nrow(business))
+len_core <- numeric(nrow(business))
+
+print(Sys.time())
+##pb <- txtProgressBar(0, nrow(business), style=3)
+
+# for each business
+for (b in seq_len(nrow(business))) {
+    ##setTxtProgressBar(pb, b)
+
+    # extract the reviews for that business
+    b_id <- business[b, "business_id"]
+    rev <- review[review$business_id == b_id,]
+
+    # iterate over all reviews for that business and tabulate
+    # the total length and adjective counts
+    nword <- 0
+    tab <- numeric()
+
+    for (r in seq_len(nrow(rev))) {
+
+        # annotate (POS tag) the review
+        anno <- coreNLP::annotateString(rev[r, "text"])
+
+        # extract the token information
+        token <- coreNLP::getToken(anno)
+
+        # map to the universal tagset
+        ut <- coreNLP::universalTagset(token$POS)
+
+        # update the word count
+        nword <- nword + sum(ut != ".")
+
+        # extract the adjectives
+        raw_tok <- token[ut == "ADJ", "token"]
+
+        # normalize case
+        tok <- stringi::stri_trans_nfkc_casefold(raw_tok)
+
+        # count the occurrences
+        t1 <- table(tok)
+
+        # update the table with the word counts
+        ix <- match(names(t1), names(tab))
+        new <- is.na(ix)
+        old <- !new
+        tab[ix[old]] <- tab[ix[old]] + t1[old] # increment existing counts
+        tab <- c(tab, t1[new]) # append new words
+    }
+
+    len_core[[b]] <- nword
+    adj_core[[b]] <- sort(tab, decreasing=TRUE)
+}
+##close(pb)
+print(Sys.time())
+# (running time was ~30 minutes on my laptop)
+```
+
+
+Tagging with OpenNLP
+--------------------
+
+```{r}
+adj_open <- vector("list", nrow(business))
+len_open <- numeric(nrow(business))
+
+sent_ator <- openNLP::Maxent_Sent_Token_Annotator()
+word_ator <- openNLP::Maxent_Word_Token_Annotator()
+pos_ator <- openNLP::Maxent_POS_Tag_Annotator()
+
+print(Sys.time())
+##pb <- txtProgressBar(0, nrow(business), style=3)
+
+tagmap <- NLP::Universal_POS_tags_map[["en-ptb"]]
+tagmap["#"] <- "." # missing as of NLP_0.1-8 
+
+# for each business
+for (b in seq_len(nrow(business))) {
+    ##setTxtProgressBar(pb, b)
+
+    # extract the reviews for that business
+    b_id <- business[b, "business_id"]
+    rev <- review[review$business_id == b_id,]
+
+    # iterate over all reviews for that business and tabulate
+    # the total length and adjective counts
+    nword <- 0
+    tab <- numeric()
+
+    for (r in seq_len(nrow(rev))) {
+        txt <- rev[r, "text"]
+        if (is.na(txt) || txt == "") {
+            next # skip the review if the text is empty
+        }
+
+        # convert the review text to String
+        s <- NLP::as.String(txt)
+
+        # tokenize into sentences and words
+        a2 <- NLP::annotate(s, list(sent_ator, word_ator))
+
+        # annotate with POS
+        a3 <- NLP::annotate(s, pos_ator, a2)
+
+        # extract the words, and their tags
+        a3w <- subset(a3, type == "word")
+        tags <- sapply(a3w$features, `[[`, "POS")
+        
+        # map to the universal tagset
+        ut <- as.vector(tagmap[tags])
+
+        # update the word count
+        nword <- nword + sum(ut != ".")
+
+        # extract the adjectives
+        a3w_adj <- a3w[ut == "ADJ"]
+
+        if (length(a3w_adj) == 0) {
+            next # skip the review if there are no adjectives
+        }
+
+        # extract the string, and normalize the case
+        raw_tok <- s[a3w_adj]
+        tok <- stringi::stri_trans_nfkc_casefold(raw_tok)
+
+        # count the occurrences
+        t1 <- table(tok)
+
+        # update the adjective table with the new word counts
+        ix <- match(names(t1), names(tab))
+        new <- is.na(ix)
+        old <- !new
+        tab[ix[old]] <- tab[ix[old]] + t1[old] # increment existing counts
+        tab <- c(tab, t1[new]) # append new words
+    }
+
+    len_open[[b]] <- nword
+    adj_open[[b]] <- sort(tab, decreasing=TRUE)
+}
+##close(pb)
+print(Sys.time())
+# (running time was ~15 minutes on my laptop)
+
+```
+
+
+Results
+-------
+
+Here are the top-two adjectives for each restaurant as reported by
+CoreNLP and OpenNLP:
+```{r}
+data.frame(name=substr(business$name, 1, 20),
+           core_adj1=sapply(adj_core, function(x) names(x)[1]),
+           core_adj2=sapply(adj_core, function(x) names(x)[2]),
+           open_adj1=sapply(adj_open, function(x) names(x)[1]),
+           open_adj2=sapply(adj_open, function(x) names(x)[2]))
+```
+
+
+Session information
+-------------------
+
+```{r}
+sessionInfo()
+```
+
+
+[yelp-academic]: http://www.yelp.com/academic_dataset
+[manage_api_keys]: https://www.yelp.com/developers/manage_api_keys
+
