@@ -17,31 +17,38 @@ stylesheet: style.css?v=1
 
 <h2>Lecture slides</h2>
 <ul>
-    <li>
-      <a href="lecture/federalist.html">Case Study: The Federalist Papers</a>
-      (<a href="lecture/federalist.Rmd">Rmd</a>; <a href="code/nbinom.R">nbinom.R</a>)
-    <li>
-      <a href="lecture/segment.html">Segmenting Text</a>
-      (<a href="lecture/segment.Rmd">Rmd</a>)
-    <li>
-      <a href="lecture/postag.html">Part-of-Speech Tagging</a>
-      (<a href="lecture/postag.Rmd">Rmd</a>)
+  <li>
+    <a href="lecture/federalist.html">Case Study: The Federalist Papers</a>
+    (<a href="lecture/federalist.Rmd">Rmd</a>)
+    <ul>
+      <li><a href="code/nbinom.R">nbinom.R</a>
+    </ul>
+  <li>
+    <a href="lecture/segment.html">Segmenting Text</a>
+    (<a href="lecture/segment.Rmd">Rmd</a>)
+  <li>
+    <a href="lecture/postag.html">Part-of-Speech Tagging</a>
+    (<a href="lecture/postag.Rmd">Rmd</a>)
 </ul>
 
 
 <h2>Handouts and assignments</h2>
 <ul>
-    <li><a href="handout/syllabus.pdf">Syllabus</a>
-    <li><a href="hw/hw01.pdf">Homework 1</a>
+  <li><a href="handout/syllabus.pdf">Syllabus</a>
+  <li><a href="hw/hw01.pdf">Homework 1</a>
     <ul>
-        <li><a href="hw/hw01.Rmd">hw01.Rmd</a>
-        <li><a href="data/federalist.json">federalist.json</a>
+      <li><a href="hw/hw01.Rmd">hw01.Rmd</a>
+      <li><a href="data/federalist.json">federalist.json</a>
     </ul>
-    <li><a href="hw/hw02.pdf">Homework 2</a>
+  <li><a href="hw/hw02.pdf">Homework 2</a>
     <ul>
-        <li><a href="data/anc-masc.json">anc-masc.json</a>
+      <li><a href="data/anc-masc.json">anc-masc.json</a>
     </ul>
-    <li><a href="hw/hw03.pdf">Homework 3</a>
+  <li><a href="hw/hw03.pdf">Homework 3</a>
+    <ul>
+      <li><a href="data/yelp-academic/01_make_json.py">01_make_json.py</a>
+      <li><a href="data/yelp-academic/02_subset_nyc.py">02_subset_nyc.py</a>
+    </ul>
 </ul>
 
 <!--
@@ -106,6 +113,13 @@ to take the course.
   <li>Cluaset, Shalizi, and Newman (2009), <a href="Clau09.pdf">Power-law
       distributions in empirical data</a>.
 -->
+  <li>Honnibal (2013),
+    <a href="https://spacy.io/blog/part-of-speech-POS-tagger-in-python">A Good Part-of-Speech Tagger in about 200 Lines of Python</a>.
+  <li>Gimpel, Schneider, O'Connor, Das, Mills, Eisenstein, Heilman, Yogatama,
+  Flanigan, and Smith (2011), <a href="http://www.cs.cmu.edu/~ark/TweetNLP/gimpel+etal.acl11.pdf">Part-of-Speech Tagging for Twitter: Annotation, Features, and Experiments</a>.
+    <ul>
+      <li><a href="http://www.cs.cmu.edu/~ark/TweetNLP/">Webpage, with links to software and training data</a>
+    </ul>
   <li>Jurafsky and Martin (2015), Speeach and Language Processing (3rd ed.  draft):
     <ul>
       <li><a href="https://web.stanford.edu/~jurafsky/slp3/8.pdf">Chapter 8: Hidden Markov Models</a>
