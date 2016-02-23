@@ -1,0 +1,190 @@
+```{r setup, cache=FALSE, echo=FALSE, global.par=TRUE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 100)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               highlight=FALSE, tidy=FALSE, warning=FALSE, message=FALSE)
+```
+
+Matrix Decompositions
+=====================
+*Patrick O. Perry, NYU Stern School of Business*
+
+
+Preliminaries
+-------------
+
+### Computing environment
+
+
+We will use the following R packages.
+
+```{r}
+library("jsonlite")
+library("Matrix")
+library("rARPACK")
+library("tm")
+```
+
+To ensure consistent runs, we set the seed before performing any
+analysis.
+
+```{r}
+set.seed(0)
+```
+
+
+### Data
+
+We will analyze the [SMART Classic3 Corpus](https://en.wikipedia.org/wiki/SMART_Information_Retrieval_System). This is a standard corpus for evaluating document clustering methods. Unfortunately, the original version appears to be unavailable. I was able to find a version of the data [hosted by Volkan Tunaliy(http://www.dataminingresearch.com/index.php/2010/09/classic3-classic4-datasets/). I have combined Tunali's version into a single JSON file, which we can read directly.
+
+```{r}
+classic <- jsonlite::stream_in(file("classic3.json"), verbose=FALSE)
+```
+
+The corpus contains abstracts from three different collections
+```{r}
+table(classic$collection)
+```
+The descriptions of the collections are as follow
+
++ **CISI:** library science
++ **CRAN:** Cranfield collection; publications from aeronautic reviews
++ **MED:** Medlars collection; publications from medical reviews
+
+
+Document-Term Matrix
+--------------------
+
+```{r}
+corpus <- VCorpus(VectorSource(classic$text))
+control <- list(tolower = TRUE, removePunctuation = TRUE,
+                removeNumbers = TRUE, stemming = TRUE,
+                stopwords = TRUE, weighting=weightTfIdf)
+dtm <- DocumentTermMatrix(corpus, control)
+dtm <- sparseMatrix(dtm$i, dtm$j, x = dtm$v, dim=dim(dtm),
+                     dimnames=dimnames(dtm))
+```
+
+
+Decompositions
+--------------
+
+With a large matrix, we usually cannot afford to compute the entire
+SVD. Instead, we compute the top 200 singular values and vectors using
+the `svds` function, from the `rARPACK` package.
+```{r}
+dtm_svd <- svds(dtm, 200)
+```
+
+For principal components analysis, we would usually "center" the matrix before
+computing the singular value decomposition. That is, we would subtract the
+column means from each row of the matrix. Then, the right singular vectors
+would be the eigenvectors of the sample covariance matrix. The problem with
+doing so is that centering the matrix makes it dense. So, in practice, most
+people avoid the centering step. That means that instead of talking about
+variance below, I talk about "dispersion" below, I mean dispersion around
+zero (variance is dispersion around the mean).
+
+To see how much dispersion is explained by each component, look at the squares
+of the singular values:
+
+```{r}
+d <- dtm_svd$d
+plot(d^2)
+```
+
+The total dispersion is equal to the sum of squares of all singular values,
+which is equal to the sum of squares of all elements of the data matrix.
+
+```{r}
+(disp_tot <- sum(dtm^2))
+```
+
+The following graph shows the cumulative dispersion explained by the leading components of the singular value decomposition:
+```{r}
+plot(cumsum(d^2) / disp_tot)
+```
+We can see that with 200 components, we are explaining over 30% of the
+variability in the data. The original data matrix has dimensions
+```{r}
+dim(dtm)
+```
+so this is a substantial reduction.
+
+
+Leading Word Vectors
+--------------------
+
+```{r}
+terms <- colnames(dtm)
+
+for (i in 1:5) {
+    cat("Top 10 terms for vector ", i, ":\n", sep="")
+    ix <- rank(-abs(dtm_svd$v[,i])) <= 10
+    print(data.frame(term=terms[ix], weight=round(dtm_svd$v[ix,i], 2)))
+    cat("\n")
+}
+```
+
+
+Document Visualization
+----------------------
+
+Here are the scores for the first two factors for all 3891 abstracts,
+colored by collection.
+
+```{r}
+x <- dtm_svd$u[,1] * dtm_svd$d[1]
+y <- dtm_svd$u[,2] * dtm_svd$d[2]
+plot(x, y, col=as.integer(factor(classic$collection)))
+```
+
+
+Clustering
+----------
+
+We can cluster the documents by applying k-means to the left singular
+vectors, scaled by their relative importances (the corresponding singular
+values):
+```{r}
+cl <- kmeans(dtm_svd$u %*% diag(dtm_svd$d), 3, nstart=100)
+```
+The output of k-means is highly dependent on the random initialization. To get
+reliable results from k-means, I use a large number of random initializations.
+
+
+We can see that the clustering was able to recover the original document
+classifications:
+```{r}
+table(classic$collection, cl$cluster)
+```
+
+If we don't do any sort of dimensionality reduction, the results are
+similar in this application, but, it takes much longer.
+```{r}
+# Not run, because it takes too long:
+##dtm_dense <- as.matrix(dtm) # k-means needs a dense matrix
+##cl0 <- kmeans(dtm_dense, 3, nstart=100)
+```
+
+
+
+Session information
+-------------------
+
+```{r}
+sessionInfo()
+```
+
+
+[yelp-academic]: http://www.yelp.com/academic_dataset
+[manage_api_keys]: https://www.yelp.com/developers/manage_api_keys
+
