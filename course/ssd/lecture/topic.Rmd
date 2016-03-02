@@ -1,0 +1,236 @@
+```{r setup, cache=FALSE, echo=FALSE, global.par=TRUE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 100)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               highlight=FALSE, tidy=FALSE, warning=FALSE, message=FALSE)
+```
+
+Topic Models
+============
+*Patrick O. Perry, NYU Stern School of Business*
+
+Most of the code here is taken from Chapter 10.3 of Taylor Arnold and Lauren
+Tilton's book, [Humanities Data in R](http://http://humanitiesdata.org/).
+
+
+Preliminaries
+-------------
+
+### Computing environment
+
+
+We will use the following R packages.
+
+```{r}
+library("mallet")
+library("coreNLP")
+```
+
+To ensure consistent runs, we set the seed before performing any
+analysis.
+
+```{r}
+set.seed(0)
+```
+
+### Data
+
+Arnold and Tilton have provided tagged versions of the wikipedia pages for 179
+philosophers. The data is available on their webpage
+([humanitiesDataInR.zip](http://humanitiesdata.org/data/humanitiesDataInR.zip)).  
+```{r}
+wikiFiles <- dir("data/ch10/wiki_annotations", full.names=TRUE)
+wikiNames <- gsub("\\.Rds", "", basename(wikiFiles))
+```
+
+Data preprocessing
+------------------
+
+### Order by year
+
+The pre-processed corpus includes a `Timex` annotation for times. The
+following code pulls out the first year mentioned in each article; this is the
+philosopher's birth year.
+
+```{r}
+dateSet <- rep(0, length(wikiFiles))
+for (j in seq_along(wikiFiles)) {
+    anno <- readRDS(wikiFiles[j])
+    tx <- getToken(anno)$Timex
+    tx <- substr(tx[!is.na(tx)], 1, 4)
+    suppressWarnings({
+        tx <- as.numeric(tx)
+    })
+    tx <- tx[!is.na(tx)]
+    dateSet[j] <- tx[1]
+}
+```
+
+Next, we order the documents by year
+```{r}
+wikiFiles <- wikiFiles[order(dateSet)]
+wikiNames <- wikiNames[order(dateSet)]
+```
+
+### Feature selection
+
+Rather than fitting the topic model to the entire text, we fit the model to
+just the lemmas of the non-proper nouns. The following code segment filters
+the text using the POS-tagged and lemmatized corpus.  For each document, we
+build a long text string containing all of the selected words, separated by
+spaces.
+
+```{r}
+bagOfWords <- rep("", length(wikiFiles))
+for (j in seq_along(wikiFiles)) {
+    anno <- readRDS(wikiFiles[j])
+    token <- getToken(anno)
+    theseLemma <- token$lemma[token$POS %in% c("NNS", "NN")]
+    bagOfWords[j] <- paste(theseLemma, collapse=" ")
+}
+```
+
+To filter out stopwords, we need to store the words in a file. Since we
+already have used POS tags to filter out stop words, we only need to worry
+about initials that may have been mistaken for non-proper nouns by the tagger.
+
+```{r}
+tf <- tempfile()
+writeLines(c(letters, LETTERS), tf)
+```
+
+
+Fitting
+-------
+
+Here is code to train the topic model:
+```{r}
+instance <- mallet.import(id.array=wikiNames, text.array=bagOfWords,
+                          stoplist.file=tf)
+tm <- MalletLDA(num.topics=9)
+tm$loadDocuments(instance)
+tm$setAlphaOptimization(20, 50)
+tm$train(200)
+tm$maximize(10)
+```
+
+These options specify how often to optimize the hyper-parameters (optimize
+alpha every 20 iterations after performing 50 burn-in iterations), how many
+training iterations to perform (200), and how iterations to use to determine
+the topics of each token (10). The values used here are the defaults suggested
+by the `mallet` package. Increasing these values may result in more consistent
+runs of the procedure.
+
+
+After fitting the model we can now pull out the topics, the words, and the
+vocabulary:
+```{r}
+topics <- mallet.doc.topics(tm, smoothed=TRUE, normalized=TRUE)
+words <- mallet.topic.words(tm, smoothed=TRUE, normalized=TRUE)
+vocab <- tm$getVocabulary()
+```
+
+Here are the dimensions of these objects:
+```{r}
+dim(topics)
+dim(words)
+length(vocab)
+```
+
+
+Results
+-------
+
+Here are the top 5 words in each of the 9 topics:
+```{r}
+t(apply(words, 1, function(v) vocab[order(v, decreasing=TRUE)[1:5]]))
+```
+The output of the topic model is sensitive to the random initialization. You
+will likely get different results every time you run this code. I do not know
+if it's possible to ensure consistent output from `mallet`. If you want your
+analysis to be reproducible, you should save the topic model output using
+a command like
+`saveRDS(list(topics=topics, words=words, vocab=vocab), "tm.rds")`.
+
+For the remainder of this analysis, we will use the results from Arnold
+and Tilton's analysis:
+```{r}
+tm <- readRDS("data/ch10/tm.Rds")
+topics <- tm$topics
+words <- tm$words
+vocab <- tm$vocab
+t(apply(words, 1, function(v) vocab[order(v, decreasing=TRUE)[1:5]]))
+```
+
+Commonly, people assign labels to the topics, based on the top 5 words.
+```{r}
+topicNames <- c("politics", "biography", "social-science", "existentialism",
+                "philosophy", "logic", "poetry", "culture", "language")
+```
+
+The next code segment shows the words with the highest activations for the
+topics:
+
+```{r}
+index <- order(apply(words, 2, max), decreasing=TRUE)[1:50]
+set <- unique(as.character(apply(words, 1, function(v)
+                                 vocab[order(v, decreasing=TRUE)][1:5])))
+index <- match(set, vocab)
+mat <- round(t(words[,index]), 3)
+mat <- mat / max(mat)
+
+plot(0, 0, col="white", t="n", axes=FALSE, xlab="", ylab="",
+     ylim=c(-1, nrow(mat)), xlim=c(-2,ncol(mat)))
+for (i in seq_len(nrow(mat))) {
+    lines(x=c(1,ncol(mat)), y=c(i,i))
+}
+for (i in seq_len(ncol(mat))) {
+    lines(x=c(i,i), y=c(1,nrow(mat)))
+}
+points(col(mat), nrow(mat) - row(mat) + 1, pch=19,
+       cex=mat*3, col=rainbow(ncol(mat), alpha=0.33)[col(mat)])
+text(0.5, nrow(mat):1, vocab[index], adj=c(1,0.5), cex=0.7)
+text(1:ncol(mat), -0.75, topicNames, adj=c(0.5,0), cex=0.7, srt=60)
+```
+
+
+We can also plot the topic distributions of the documents in the corpus:
+
+```{r, fig.height=21}
+mat <- topics / max(topics)
+plot(0, 0, col="white", t="n", axes=FALSE, xlab="", ylab="",
+     ylim=c(-1, nrow(mat)), xlim=c(-2,ncol(mat)))
+for (i in seq_len(nrow(mat))) {
+    lines(x=c(1,ncol(mat)), y=c(i,i))
+}
+for (i in seq_len(ncol(mat))) {
+    lines(x=c(i,i), y=c(1,nrow(mat)))
+}
+points(col(mat), nrow(mat) - row(mat) + 1, pch=19,
+       cex=mat*3, col=rainbow(ncol(mat), alpha=0.33)[col(mat)])
+text(0.5, nrow(mat):1, wikiNames, adj=c(1,0.5), cex=0.7)
+text(1:ncol(mat), -0.75, topicNames, adj=c(0.5,0), cex=0.7, srt=60)
+```
+
+
+
+
+
+
+
+
+
+Session information
+-------------------
+
+```{r}
+sessionInfo()
+```
