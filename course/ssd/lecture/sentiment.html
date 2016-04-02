@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<title>Sentiment Analysis</title>
+
+<script type="text/javascript">
+window.onload = function() {
+  var imgs = document.getElementsByTagName('img'), i, img;
+  for (i = 0; i < imgs.length; i++) {
+    img = imgs[i];
+    // center an image if it is the only element of its parent
+    if (img.parentElement.childElementCount === 1)
+      img.parentElement.style.textAlign = 'center';
+  }
+};
+</script>
+
+
+
+
+
+<style type="text/css">
+body, td {
+   font-family: sans-serif;
+   background-color: white;
+   font-size: 13px;
+}
+
+body {
+  max-width: 800px;
+  margin: auto;
+  padding: 1em;
+  line-height: 20px;
+}
+
+tt, code, pre {
+   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+
+h1 {
+   font-size:2.2em;
+}
+
+h2 {
+   font-size:1.8em;
+}
+
+h3 {
+   font-size:1.4em;
+}
+
+h4 {
+   font-size:1.0em;
+}
+
+h5 {
+   font-size:0.9em;
+}
+
+h6 {
+   font-size:0.8em;
+}
+
+a:visited {
+   color: rgb(50%, 0%, 50%);
+}
+
+pre, img {
+  max-width: 100%;
+}
+pre {
+  overflow-x: auto;
+}
+pre code {
+   display: block; padding: 0.5em;
+}
+
+code {
+  font-size: 92%;
+  border: 1px solid #ccc;
+}
+
+code[class] {
+  background-color: #F8F8F8;
+}
+
+table, td, th {
+  border: none;
+}
+
+blockquote {
+   color:#666666;
+   margin:0;
+   padding-left: 1em;
+   border-left: 0.5em #EEE solid;
+}
+
+hr {
+   height: 0px;
+   border-bottom: none;
+   border-top-width: thin;
+   border-top-style: dotted;
+   border-top-color: #999999;
+}
+
+@media print {
+   * {
+      background: transparent !important;
+      color: black !important;
+      filter:none !important;
+      -ms-filter: none !important;
+   }
+
+   body {
+      font-size:12pt;
+      max-width:100%;
+   }
+
+   a, a:visited {
+      text-decoration: underline;
+   }
+
+   hr {
+      visibility: hidden;
+      page-break-before: always;
+   }
+
+   pre, blockquote {
+      padding-right: 1em;
+      page-break-inside: avoid;
+   }
+
+   tr, img {
+      page-break-inside: avoid;
+   }
+
+   img {
+      max-width: 100% !important;
+   }
+
+   @page :left {
+      margin: 15mm 20mm 15mm 10mm;
+   }
+
+   @page :right {
+      margin: 15mm 10mm 15mm 20mm;
+   }
+
+   p, h2, h3 {
+      orphans: 3; widows: 3;
+   }
+
+   h2, h3 {
+      page-break-after: avoid;
+   }
+}
+</style>
+
+
+
+</head>
+
+<body>
+<h1>Sentiment Analysis</h1>
+
+<p><em>Patrick O. Perry, NYU Stern School of Business</em></p>
+
+<h2>Preliminaries</h2>
+
+<h3>Computing environment</h3>
+
+<p>We will use the following R packages.</p>
+
+<pre><code class="text">library(&quot;LiblineaR&quot;)
+library(&quot;Matrix&quot;)
+library(&quot;nnet&quot;) # for multinom
+library(&quot;tm&quot;)
+</code></pre>
+
+<p>To ensure consistent runs, we set the seed before performing any
+analysis.</p>
+
+<pre><code class="text">set.seed(0)
+</code></pre>
+
+<h3>Data</h3>
+
+<p>We will look at <a href="http://www.crowdflower.com/data-for-everyone#hs_cos_wrapper_widget_3255657063">tweets from the first GOP debate</a>. These were collected and annotated by <a href="http://www.crowdflower.com/">CrowdFlower</a>.</p>
+
+<pre><code class="text">tweet &lt;- read.csv(&quot;GOP_REL_ONLY.csv&quot;)
+tweet$text &lt;- as.character(tweet$text) # don&#39;t tweet &#39;text&#39; as factor
+
+# IMPORTANT: we make &#39;Neutral&#39; the reference class for the sentiment
+tweet$sentiment &lt;- relevel(tweet$sentiment, ref=&quot;Neutral&quot;)
+summary(tweet)
+</code></pre>
+
+<pre><code>                  candidate    candidate.confidence relevant_yn relevant_yn.confidence
+ No candidate mentioned:7491   Min.   :0.2222       yes:13871   Min.   :0.3333        
+ Donald Trump          :2813   1st Qu.:0.6742                   1st Qu.:1.0000        
+ Jeb Bush              : 705   Median :1.0000                   Median :1.0000        
+ Ted Cruz              : 637   Mean   :0.8557                   Mean   :0.9273        
+ Ben Carson            : 404   3rd Qu.:1.0000                   3rd Qu.:1.0000        
+ Mike Huckabee         : 393   Max.   :1.0000                   Max.   :1.0000        
+ (Other)               :1428                                                          
+    sentiment    sentiment.confidence                              subject_matter
+ Neutral :3142   Min.   :0.1860       None of the above                   :8148  
+ Negative:8493   1st Qu.:0.6517       FOX News or Moderators              :2900  
+ Positive:2236   Median :0.6813       Religion                            : 407  
+                 Mean   :0.7569       Foreign Policy                      : 366  
+                 3rd Qu.:1.0000       Women&#39;s Issues (not abortion though): 362  
+                 Max.   :1.0000       Racial issues                       : 353  
+                                      (Other)                             :1335  
+ subject_matter.confidence                candidate_gold               name       relevant_yn_gold
+ Min.   :0.2222                                  :13843   msgoddessrises :   55      :13839       
+ 1st Qu.:0.6413            No candidate mentioned:   10   RT0787         :   42   yes:   32       
+ Median :1.0000            Donald Trump          :    6   b140tweet      :   34                   
+ Mean   :0.7828            Mike Huckabee         :    3   jojo21         :   33                   
+ 3rd Qu.:1.0000            Jeb Bush              :    2   SupermanHotMale:   32                   
+ Max.   :1.0000            Marco Rubio           :    2   EusebiaAq      :   30                   
+                           (Other)               :    5   (Other)        :13645                   
+ retweet_count              sentiment_gold                                      subject_matter_gold
+ Min.   :   0.0                    :13856                                                 :13853   
+ 1st Qu.:   0.0   Negative         :   10   FOX News or Moderators                        :    4   
+ Median :   2.0   Negative\nNeutral:    1   Abortion                                      :    3   
+ Mean   :  45.8   Positive         :    3   Abortion\nWomen&#39;s Issues (not abortion though):    2   
+ 3rd Qu.:  44.0   Positive\nNeutral:    1   Immigration                                   :    2   
+ Max.   :4965.0                             Religion                                      :    2   
+                                            (Other)                                       :    5   
+     text                                 tweet_coord                      tweet_created  
+ Length:13871                                   :13850   2015-08-07 08:44:44 -0700:    8  
+ Class :character   [41.7599487, -72.7024307]   :    2   2015-08-07 09:29:29 -0700:    8  
+ Mode  :character   [21.97850292, -159.34894421]:    1   2015-08-07 08:39:31 -0700:    7  
+                    [25.07852081, -80.44294696] :    1   2015-08-07 09:37:23 -0700:    7  
+                    [26.26744224, -80.20737825] :    1   2015-08-07 09:47:57 -0700:    7  
+                    [29.58026, -95.2541389]     :    1   2015-08-07 09:52:47 -0700:    7  
+                    (Other)                     :   15   (Other)                  :13827  
+    tweet_id                tweet_location                    user_timezone 
+ Min.   :6.295e+17                 :3912                             :4403  
+ 1st Qu.:6.295e+17   USA           : 239   Eastern Time (US &amp; Canada):3474  
+ Median :6.297e+17   Washington, DC: 128   Central Time (US &amp; Canada):1943  
+ Mean   :6.296e+17   New York, NY  : 120   Pacific Time (US &amp; Canada):1655  
+ 3rd Qu.:6.297e+17   Texas         :  88   Atlantic Time (Canada)    : 461  
+ Max.   :6.297e+17   New York      :  75   Quito                     : 432  
+                     (Other)       :9309   (Other)                   :1503  
+</code></pre>
+
+<p>These tweets have been hand-labeled by human crowdworkers. </p>
+
+<p>Here are the first few tweets:</p>
+
+<pre><code class="text">head(tweet$text)
+</code></pre>
+
+<pre><code>[1] &quot;RT @NancyLeeGrahn: How did everyone feel about the Climate Change question last night? Exactly. #GOPDebate&quot;                                  
+[2] &quot;RT @ScottWalker: Didn&#39;t catch the full #GOPdebate last night. Here are some of Scott&#39;s best lines in 90 seconds. #Walker16 http://t.co/ZSfF…&quot;
+[3] &quot;RT @TJMShow: No mention of Tamir Rice and the #GOPDebate was held in Cleveland? Wow.&quot;                                                        
+[4] &quot;RT @RobGeorge: That Carly Fiorina is trending -- hours after HER debate -- above any of the men in just-completed #GOPdebate says she&#39;s on …&quot;
+[5] &quot;RT @DanScavino: #GOPDebate w/ @realDonaldTrump delivered the highest ratings in the history of presidential debates. #Trump2016 http://t.co…&quot;
+[6] &quot;RT @GregAbbott_TX: @TedCruz: \&quot;On my first day I will rescind every illegal executive action taken by Barack Obama.\&quot; #GOPDebate @FoxNews&quot;   
+</code></pre>
+
+<h2>Pre-Processing</h2>
+
+<pre><code class="text"># We will use bigrams
+
+corpus &lt;- VCorpus(VectorSource(tweet$text))
+control &lt;- list(tolower = TRUE, removePunctuation = TRUE,
+                removeNumbers = TRUE, wordLengths=c(1, Inf))
+dtm &lt;- DocumentTermMatrix(corpus, control=control)
+dtm &lt;- sparseMatrix(dtm$i, dtm$j, x = dtm$v, dim=dim(dtm),
+                     dimnames=dimnames(dtm))
+</code></pre>
+
+<h2>Training and Test Sets</h2>
+
+<p>To compare the methods, we will use a random sample of 80% of the dataset for
+training, and the remaining 20% for testing</p>
+
+<pre><code class="text">train_ix &lt;- sample(nrow(dtm), floor(0.8 * nrow(dtm)))
+train &lt;- logical(nrow(dtm))
+train[train_ix] &lt;- TRUE
+test &lt;- !train
+</code></pre>
+
+<h2>Naive Bayes Method</h2>
+
+<p>In the naive Bayes method, we just predict the same sentiment probabilities
+for all tweets. We learn these probabilities from the training data. We can do this by fitting a multinomial logit model with no covariates:</p>
+
+<pre><code class="text">(nb &lt;- multinom(sentiment ~ 1, tweet, subset=train))
+</code></pre>
+
+<pre><code># weights:  6 (2 variable)
+initial  value 12190.201955 
+final  value 10323.084189 
+converged
+</code></pre>
+
+<pre><code>Call:
+multinom(formula = sentiment ~ 1, data = tweet, subset = train)
+
+Coefficients:
+         (Intercept)
+Negative   0.9887498
+Positive  -0.3547696
+
+Residual Deviance: 20646.17 
+AIC: 20650.17 
+</code></pre>
+
+<p>Here are the class probabilities:</p>
+
+<pre><code class="text">predict(nb, newdata=data.frame(row.names=1), &quot;probs&quot;)
+</code></pre>
+
+<pre><code>  Neutral  Negative  Positive 
+0.2278316 0.6123821 0.1597863 
+</code></pre>
+
+<h2>Dictionary Method</h2>
+
+<p>The simplest sentiment detection methods are based on counting the numbers of
+positive and negative words in the texts. To use such methods, we use <a href="https://www.cs.uic.edu/%7Eliub/FBS/sentiment-analysis.html#lexicon">Bing Liu&#39;s lists of positive and negative sentiment words</a> (<a href="http://www.cs.uic.edu/%7Eliub/FBS/opinion-lexicon-English.rar">RAR archive</a>).</p>
+
+<pre><code class="text">pos_words &lt;- scan(&quot;positive-words.txt&quot;, character(), comment.char=&quot;;&quot;)
+neg_words &lt;- scan(&quot;negative-words.txt&quot;, character(), comment.char=&quot;;&quot;)
+</code></pre>
+
+<p>Here are some of the words from Liu&#39;s lists:</p>
+
+<pre><code class="text"># Positive words
+sample(pos_words, 30)
+</code></pre>
+
+<pre><code> [1] &quot;flawless&quot;      &quot;fortunate&quot;     &quot;posh&quot;          &quot;overtakes&quot;     &quot;rapid&quot;         &quot;dotingly&quot;     
+ [7] &quot;god-send&quot;      &quot;award&quot;         &quot;dignity&quot;       &quot;cashback&quot;      &quot;free&quot;          &quot;refunded&quot;     
+[13] &quot;evenly&quot;        &quot;reasonable&quot;    &quot;invulnerable&quot;  &quot;unrivaled&quot;     &quot;breakthroughs&quot; &quot;pardon&quot;       
+[19] &quot;wholesome&quot;     &quot;bolster&quot;       &quot;multi-purpose&quot; &quot;honest&quot;        &quot;cure-all&quot;      &quot;well-managed&quot; 
+[25] &quot;admiringly&quot;    &quot;affable&quot;       &quot;sharper&quot;       &quot;nourishment&quot;   &quot;immaculate&quot;    &quot;astutely&quot;     
+</code></pre>
+
+<pre><code class="text"># Negative words
+sample(neg_words, 30)
+</code></pre>
+
+<pre><code> [1] &quot;infamous&quot;       &quot;victimize&quot;      &quot;frightening&quot;    &quot;feckless&quot;       &quot;pander&quot;        
+ [6] &quot;condescension&quot;  &quot;unreachable&quot;    &quot;inflict&quot;        &quot;forgetfulness&quot;  &quot;garbage&quot;       
+[11] &quot;paucity&quot;        &quot;oppose&quot;         &quot;inconsistency&quot;  &quot;accusing&quot;       &quot;scars&quot;         
+[16] &quot;bristle&quot;        &quot;wreak&quot;          &quot;assail&quot;         &quot;reproachful&quot;    &quot;oppressiveness&quot;
+[21] &quot;annoyingly&quot;     &quot;partisans&quot;      &quot;blasphemous&quot;    &quot;blinding&quot;       &quot;stuffy&quot;        
+[26] &quot;inessential&quot;    &quot;bothered&quot;       &quot;adverse&quot;        &quot;denied&quot;         &quot;persecution&quot;   
+</code></pre>
+
+<p>We form vectors with weights for the positive and negative words:</p>
+
+<pre><code class="text">vocab &lt;- colnames(dtm)
+nvocab &lt;- length(vocab)
+pos_wt &lt;- numeric(nvocab)
+pos_wt[match(pos_words, vocab, 0)] &lt;- 1
+
+neg_wt &lt;- numeric(nvocab)
+neg_wt[match(neg_words, vocab, 0)] &lt;- 1
+</code></pre>
+
+<p>We then form features for each tweet, counting the number of positive and
+negative words.</p>
+
+<pre><code class="text">tweet$pos_count &lt;- as.numeric(dtm %*% pos_wt)
+tweet$neg_count &lt;- as.numeric(dtm %*% neg_wt)
+</code></pre>
+
+<p>We get weights on these features using a multinomial logistic model:</p>
+
+<pre><code class="text">(dict &lt;- multinom(sentiment ~ pos_count + neg_count, tweet, subset=train))
+</code></pre>
+
+<pre><code># weights:  12 (6 variable)
+initial  value 12190.201955 
+iter  10 value 9828.090585
+iter  20 value 9730.272442
+iter  20 value 9730.272392
+iter  20 value 9730.272378
+final  value 9730.272378 
+converged
+</code></pre>
+
+<pre><code>Call:
+multinom(formula = sentiment ~ pos_count + neg_count, data = tweet, 
+    subset = train)
+
+Coefficients:
+         (Intercept) pos_count  neg_count
+Negative   0.6077960 0.1291945  0.7762683
+Positive  -0.8320178 0.7074497 -0.1689209
+
+Residual Deviance: 19460.54 
+AIC: 19472.54 
+</code></pre>
+
+<p>This model uses the prior class probabilities to inform the predictions. This
+will help predictions when the training set sentiment probabilities are
+representative of the test set.</p>
+
+<p>Here are some predictions from the model:</p>
+
+<pre><code class="text"># positive words only
+predict(dict, newdata=data.frame(pos_count=1, neg_count=0), &quot;probs&quot;)
+</code></pre>
+
+<pre><code>  Neutral  Negative  Positive 
+0.2517297 0.5260237 0.2222466 
+</code></pre>
+
+<pre><code class="text">predict(dict, newdata=data.frame(pos_count=2, neg_count=0), &quot;probs&quot;)
+</code></pre>
+
+<pre><code>  Neutral  Negative  Positive 
+0.1934605 0.4600146 0.3465250 
+</code></pre>
+
+<pre><code class="text">predict(dict, newdata=data.frame(pos_count=10, neg_count=0), &quot;probs&quot;)
+</code></pre>
+
+<pre><code>    Neutral    Negative    Positive 
+0.001916385 0.012809427 0.985274188 
+</code></pre>
+
+<pre><code class="text"># negative words only
+predict(dict, newdata=data.frame(pos_count=0, neg_count=1), &quot;probs&quot;)
+</code></pre>
+
+<pre><code>   Neutral   Negative   Positive 
+0.18661507 0.74479749 0.06858744 
+</code></pre>
+
+<pre><code class="text">predict(dict, newdata=data.frame(pos_count=0, neg_count=5), &quot;probs&quot;)
+</code></pre>
+
+<pre><code>    Neutral    Negative    Positive 
+0.011082590 0.986844915 0.002072495 
+</code></pre>
+
+<pre><code class="text"># both types of words
+predict(dict, newdata=data.frame(pos_count=10, neg_count=1), &quot;probs&quot;)
+</code></pre>
+
+<pre><code>    Neutral    Negative    Positive 
+0.002223457 0.032300162 0.965476381 
+</code></pre>
+
+<pre><code class="text">predict(dict, newdata=data.frame(pos_count=10, neg_count=5), &quot;probs&quot;)
+</code></pre>
+
+<pre><code>    Neutral    Negative    Positive 
+0.001831347 0.593557447 0.404611206 
+</code></pre>
+
+<h2>Equal-Weighted Dictionary Method</h2>
+
+<p>For a simpler predictor, we can force the coefficients on <code>pos_count</code> and
+<code>neg_count</code> to have the same absolute value using the following method:</p>
+
+<pre><code class="text">(dict_eq &lt;- multinom(sentiment ~ I(pos_count - neg_count), tweet,
+                     subset=train))
+</code></pre>
+
+<pre><code># weights:  9 (4 variable)
+initial  value 12190.201955 
+final  value 9903.034703 
+converged
+</code></pre>
+
+<pre><code>Call:
+multinom(formula = sentiment ~ I(pos_count - neg_count), data = tweet, 
+    subset = train)
+
+Coefficients:
+         (Intercept) I(pos_count - neg_count)
+Negative    1.013631               -0.2386327
+Positive   -0.606270                0.4866102
+
+Residual Deviance: 19806.07 
+AIC: 19814.07 
+</code></pre>
+
+<h2>Other Covariates</h2>
+
+<p>It is of course possible to use other covariates to aid with the predictions
+(we will not do this here).</p>
+
+<h2>N-Gram Models</h2>
+
+<p>The main problem with dictionary methods is that many texts do not contain the
+sentiment lexicon words:</p>
+
+<pre><code class="text"># Raw counts:
+table(tweet$pos_count, tweet$neg_count)
+</code></pre>
+
+<pre><code>
+       0    1    2    3    4    5    6    7    9
+  0 4973 1982  549  106   30    1    0    0    0
+  1 2821 1003  331   69   12    1    1    1    1
+  2  965  445   83   26    5    2    0    0    0
+  3  295   87   25    2    0    0    0    0    0
+  4   27   12    1    3    0    0    0    0    0
+  5    9    2    0    0    0    0    0    0    0
+  6    1    0    0    0    0    0    0    0    0
+</code></pre>
+
+<pre><code class="text"># Relative counts (%):
+round(100 * table(tweet$pos_count, tweet$neg_count) / nrow(tweet), 2)
+</code></pre>
+
+<pre><code>
+        0     1     2     3     4     5     6     7     9
+  0 35.85 14.29  3.96  0.76  0.22  0.01  0.00  0.00  0.00
+  1 20.34  7.23  2.39  0.50  0.09  0.01  0.01  0.01  0.01
+  2  6.96  3.21  0.60  0.19  0.04  0.01  0.00  0.00  0.00
+  3  2.13  0.63  0.18  0.01  0.00  0.00  0.00  0.00  0.00
+  4  0.19  0.09  0.01  0.02  0.00  0.00  0.00  0.00  0.00
+  5  0.06  0.01  0.00  0.00  0.00  0.00  0.00  0.00  0.00
+  6  0.01  0.00  0.00  0.00  0.00  0.00  0.00  0.00  0.00
+</code></pre>
+
+<p>For 35.85% of all texts, we just predict sentiment using the prior
+probabilities. This is clearly undesirable.</p>
+
+<pre><code class="text"># Compute bigrams
+BigramTokenizer &lt;- function(x) {
+    unlist(lapply(ngrams(words(x), 2), paste, collapse = &quot; &quot;),
+           use.names = FALSE)
+}
+control2 &lt;- control
+control2$tokenize &lt;- BigramTokenizer
+dtm2 &lt;- DocumentTermMatrix(corpus, control=control2)
+dtm2 &lt;- sparseMatrix(dtm2$i, dtm2$j, x = dtm2$v, dim=dim(dtm2),
+                     dimnames=dimnames(dtm2))
+
+x &lt;- cbind(dtm, dtm2)    # predictors: unigrams and bigrams
+df &lt;- colSums(x &gt; 0)     # + remove rate terms
+x &lt;- x[,df &gt;= 5]
+
+df &lt;- colSums(x &gt; 0)     # + use tf-idf scaling
+x &lt;- t(t(x) * log(1 + ncol(x) / df))
+
+x &lt;- as.matrix(x)        # + convert to dense matrix (needed for LiblineaR)
+
+y &lt;- tweet$sentiment     # response: sentiment
+
+
+# Choose cost by cross-validation
+do_fit &lt;- function(x, y, type, costs=10^c(-6, -3, 0, 3, 6)) {
+    best_cost &lt;- NA
+    best_acc &lt;- 0
+    for (co in costs) {
+        acc &lt;- LiblineaR(data=x, target=y, type=type, cost=co, bias=TRUE,
+                         cross=5)
+        cat(&quot;Results for C=&quot;, co, &quot; : &quot;,acc,&quot; accuracy.\n&quot;,sep=&quot;&quot;)
+        if (acc &gt; best_acc) {
+            best_cost &lt;- co
+            best_acc &lt;- acc
+        }
+    }
+
+    LiblineaR(data=x, target=y, type=type, cost=best_cost, bias=TRUE)
+}
+
+ix &lt;- train &amp; y != &quot;Neutral&quot;
+
+# l2-regularized logistic regression (type = 0)
+fit_l2 &lt;- do_fit(x[ix,], y[ix], type=0)
+</code></pre>
+
+<pre><code>Results for C=1e-06 : 0.7934174 accuracy.
+Results for C=0.001 : 0.8388189 accuracy.
+Results for C=1 : 0.8457049 accuracy.
+Results for C=1000 : 0.8284314 accuracy.
+Results for C=1e+06 : 0.8295985 accuracy.
+</code></pre>
+
+<pre><code class="text"># l1-regularized logistic regression (type = 6)
+fit_l1 &lt;- do_fit(x[ix,], y[ix], type=6)
+</code></pre>
+
+<pre><code>Results for C=1e-06 : 0.6764706 accuracy.
+Results for C=0.001 : 0.7930672 accuracy.
+Results for C=1 : 0.8425537 accuracy.
+Results for C=1000 : 0.8161765 accuracy.
+Results for C=1e+06 : 0.8005369 accuracy.
+</code></pre>
+
+<pre><code class="text">pred_l2 &lt;- predict(fit_l2, x, proba=TRUE)$probabilities
+pred_l2 &lt;- cbind(Neutral=0, pred_l2)[,levels(y)]
+
+pred_l1 &lt;- predict(fit_l1, x, proba=TRUE)$probabilities
+pred_l1 &lt;- cbind(Neutral=0, pred_l1)[,levels(y)]
+</code></pre>
+
+<h2>Comparison</h2>
+
+<pre><code class="text">loss &lt;- function(pred, y) {
+    as.numeric(apply(pred, 1, which.max) != as.integer(y))
+}
+
+risk &lt;- function(pred, y, train, test) {
+    neut &lt;- y == &quot;Neutral&quot;
+    l &lt;- loss(pred, y)
+    c(train=mean(l[train]),
+      train_polar=mean(l[train &amp; !neut]),
+      test=mean(l[test]),
+      test_polar=mean(l[test &amp; !neut]))
+}
+
+# Naive Bayes
+risk(predict(nb, newdata=tweet, &quot;probs&quot;), y, train, test)
+</code></pre>
+
+<pre><code>      train train_polar        test  test_polar 
+  0.3876172   0.2069328   0.3881081   0.2142527 
+</code></pre>
+
+<pre><code class="text"># Dictionary
+risk(predict(dict, newdata=tweet, &quot;probs&quot;), y, train, test)
+</code></pre>
+
+<pre><code>      train train_polar        test  test_polar 
+  0.3911319   0.2114846   0.3909910   0.2179547 
+</code></pre>
+
+<pre><code class="text"># l1-regularized logistic
+risk(pred_l1, y, train, test)
+</code></pre>
+
+<pre><code>      train train_polar        test  test_polar 
+ 0.24576424  0.02322596  0.33981982  0.15224433 
+</code></pre>
+
+<pre><code class="text"># l2-regularized logistic
+risk(pred_l2, y, train, test)
+</code></pre>
+
+<pre><code>      train train_polar        test  test_polar 
+ 0.24441240  0.02147526  0.34054054  0.15316983 
+</code></pre>
+
+<h2>Session information</h2>
+
+<pre><code class="text">sessionInfo()
+</code></pre>
+
+<pre><code>R version 3.2.3 (2015-12-10)
+Platform: x86_64-apple-darwin13.4.0 (64-bit)
+Running under: OS X 10.10.5 (Yosemite)
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  base     
+
+other attached packages:
+[1] tm_0.6-2           NLP_0.1-8          nnet_7.3-11        Matrix_1.2-3       LiblineaR_1.94-2  
+[6] RColorBrewer_1.1-2 knitr_1.12.3      
+
+loaded via a namespace (and not attached):
+ [1] codetools_0.2-14 lattice_0.20-33  digest_0.6.8     slam_0.1-32      grid_3.2.3      
+ [6] formatR_1.1      magrittr_1.5     evaluate_0.8     stringi_1.0-1    tools_3.2.3     
+[11] stringr_1.0.0    parallel_3.2.3   methods_3.2.3   
+</code></pre>
+
+</body>
+
+</html>

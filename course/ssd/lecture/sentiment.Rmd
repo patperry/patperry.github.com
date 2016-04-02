@@ -1,0 +1,297 @@
+```{r setup, cache=FALSE, echo=FALSE, global.par=TRUE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 100)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               highlight=FALSE, tidy=FALSE, warning=FALSE, message=FALSE)
+```
+
+Sentiment Analysis
+==================
+*Patrick O. Perry, NYU Stern School of Business*
+
+
+Preliminaries
+-------------
+
+### Computing environment
+
+
+We will use the following R packages.
+
+```{r}
+library("LiblineaR")
+library("Matrix")
+library("nnet") # for multinom
+library("tm")
+```
+
+To ensure consistent runs, we set the seed before performing any
+analysis.
+
+```{r}
+set.seed(0)
+```
+
+### Data
+
+We will look at [tweets from the first GOP debate](http://www.crowdflower.com/data-for-everyone#hs_cos_wrapper_widget_3255657063). These were collected and annotated by [CrowdFlower](http://www.crowdflower.com/).
+```{r}
+tweet <- read.csv("GOP_REL_ONLY.csv")
+tweet$text <- as.character(tweet$text) # don't tweet 'text' as factor
+
+# IMPORTANT: we make 'Neutral' the reference class for the sentiment
+tweet$sentiment <- relevel(tweet$sentiment, ref="Neutral")
+summary(tweet)
+```
+
+These tweets have been hand-labeled by human crowdworkers. 
+
+Here are the first few tweets:
+```{r}
+head(tweet$text)
+```
+
+Pre-Processing
+--------------
+
+```{r}
+# We will use bigrams
+
+corpus <- VCorpus(VectorSource(tweet$text))
+control <- list(tolower = TRUE, removePunctuation = TRUE,
+                removeNumbers = TRUE, wordLengths=c(1, Inf))
+dtm <- DocumentTermMatrix(corpus, control=control)
+dtm <- sparseMatrix(dtm$i, dtm$j, x = dtm$v, dim=dim(dtm),
+                     dimnames=dimnames(dtm))
+```
+
+
+Training and Test Sets
+----------------------
+
+To compare the methods, we will use a random sample of 80% of the dataset for
+training, and the remaining 20% for testing
+```{r}
+train_ix <- sample(nrow(dtm), floor(0.8 * nrow(dtm)))
+train <- logical(nrow(dtm))
+train[train_ix] <- TRUE
+test <- !train
+```
+
+
+Naive Bayes Method
+------------------
+
+In the naive Bayes method, we just predict the same sentiment probabilities
+for all tweets. We learn these probabilities from the training data. We can do this by fitting a multinomial logit model with no covariates:
+
+```{r}
+(nb <- multinom(sentiment ~ 1, tweet, subset=train))
+```
+
+Here are the class probabilities:
+```{r}
+predict(nb, newdata=data.frame(row.names=1), "probs")
+```
+
+
+Dictionary Method
+-----------------
+
+The simplest sentiment detection methods are based on counting the numbers of
+positive and negative words in the texts. To use such methods, we use [Bing Liu's lists of positive and negative sentiment words](https://www.cs.uic.edu/~liub/FBS/sentiment-analysis.html#lexicon) ([RAR archive](http://www.cs.uic.edu/~liub/FBS/opinion-lexicon-English.rar)).
+
+```{r}
+pos_words <- scan("positive-words.txt", character(), comment.char=";")
+neg_words <- scan("negative-words.txt", character(), comment.char=";")
+```
+
+Here are some of the words from Liu's lists:
+```{r}
+# Positive words
+sample(pos_words, 30)
+
+# Negative words
+sample(neg_words, 30)
+```
+
+We form vectors with weights for the positive and negative words:
+```{r}
+vocab <- colnames(dtm)
+nvocab <- length(vocab)
+pos_wt <- numeric(nvocab)
+pos_wt[match(pos_words, vocab, 0)] <- 1
+
+neg_wt <- numeric(nvocab)
+neg_wt[match(neg_words, vocab, 0)] <- 1
+```
+
+We then form features for each tweet, counting the number of positive and
+negative words.
+
+```{r}
+tweet$pos_count <- as.numeric(dtm %*% pos_wt)
+tweet$neg_count <- as.numeric(dtm %*% neg_wt)
+```
+
+We get weights on these features using a multinomial logistic model:
+```{r}
+(dict <- multinom(sentiment ~ pos_count + neg_count, tweet, subset=train))
+```
+This model uses the prior class probabilities to inform the predictions. This
+will help predictions when the training set sentiment probabilities are
+representative of the test set.
+
+Here are some predictions from the model:
+```{r}
+# positive words only
+predict(dict, newdata=data.frame(pos_count=1, neg_count=0), "probs")
+predict(dict, newdata=data.frame(pos_count=2, neg_count=0), "probs")
+predict(dict, newdata=data.frame(pos_count=10, neg_count=0), "probs")
+
+# negative words only
+predict(dict, newdata=data.frame(pos_count=0, neg_count=1), "probs")
+predict(dict, newdata=data.frame(pos_count=0, neg_count=5), "probs")
+
+# both types of words
+predict(dict, newdata=data.frame(pos_count=10, neg_count=1), "probs")
+predict(dict, newdata=data.frame(pos_count=10, neg_count=5), "probs")
+```
+
+
+Equal-Weighted Dictionary Method
+--------------------------------
+
+For a simpler predictor, we can force the coefficients on `pos_count` and
+`neg_count` to have the same absolute value using the following method:
+
+```{r}
+(dict_eq <- multinom(sentiment ~ I(pos_count - neg_count), tweet,
+                     subset=train))
+```
+
+
+Other Covariates
+----------------
+
+It is of course possible to use other covariates to aid with the predictions
+(we will not do this here).
+
+
+N-Gram Models
+-------------
+The main problem with dictionary methods is that many texts do not contain the
+sentiment lexicon words:
+```{r}
+# Raw counts:
+table(tweet$pos_count, tweet$neg_count)
+
+# Relative counts (%):
+round(100 * table(tweet$pos_count, tweet$neg_count) / nrow(tweet), 2)
+```
+For 35.85% of all texts, we just predict sentiment using the prior
+probabilities. This is clearly undesirable.
+
+
+```{r}
+# Compute bigrams
+BigramTokenizer <- function(x) {
+    unlist(lapply(ngrams(words(x), 2), paste, collapse = " "),
+           use.names = FALSE)
+}
+control2 <- control
+control2$tokenize <- BigramTokenizer
+dtm2 <- DocumentTermMatrix(corpus, control=control2)
+dtm2 <- sparseMatrix(dtm2$i, dtm2$j, x = dtm2$v, dim=dim(dtm2),
+                     dimnames=dimnames(dtm2))
+
+x <- cbind(dtm, dtm2)    # predictors: unigrams and bigrams
+df <- colSums(x > 0)     # + remove rate terms
+x <- x[,df >= 5]
+
+df <- colSums(x > 0)     # + use tf-idf scaling
+x <- t(t(x) * log(1 + ncol(x) / df))
+
+x <- as.matrix(x)        # + convert to dense matrix (needed for LiblineaR)
+
+y <- tweet$sentiment     # response: sentiment
+
+
+# Choose cost by cross-validation
+do_fit <- function(x, y, type, costs=10^c(-6, -3, 0, 3, 6)) {
+    best_cost <- NA
+    best_acc <- 0
+    for (co in costs) {
+        acc <- LiblineaR(data=x, target=y, type=type, cost=co, bias=TRUE,
+                         cross=5)
+        cat("Results for C=", co, " : ",acc," accuracy.\n",sep="")
+		if (acc > best_acc) {
+			best_cost <- co
+			best_acc <- acc
+		}
+    }
+
+    LiblineaR(data=x, target=y, type=type, cost=best_cost, bias=TRUE)
+}
+
+ix <- train & y != "Neutral"
+
+# l2-regularized logistic regression (type = 0)
+fit_l2 <- do_fit(x[ix,], y[ix], type=0)
+
+# l1-regularized logistic regression (type = 6)
+fit_l1 <- do_fit(x[ix,], y[ix], type=6)
+
+pred_l2 <- predict(fit_l2, x, proba=TRUE)$probabilities
+pred_l2 <- cbind(Neutral=0, pred_l2)[,levels(y)]
+
+pred_l1 <- predict(fit_l1, x, proba=TRUE)$probabilities
+pred_l1 <- cbind(Neutral=0, pred_l1)[,levels(y)]
+
+```
+
+Comparison
+----------
+
+```{r}
+loss <- function(pred, y) {
+    as.numeric(apply(pred, 1, which.max) != as.integer(y))
+}
+
+risk <- function(pred, y, train, test) {
+    neut <- y == "Neutral"
+    l <- loss(pred, y)
+    c(train=mean(l[train]),
+      train_polar=mean(l[train & !neut]),
+      test=mean(l[test]),
+      test_polar=mean(l[test & !neut]))
+}
+
+# Naive Bayes
+risk(predict(nb, newdata=tweet, "probs"), y, train, test)
+
+# Dictionary
+risk(predict(dict, newdata=tweet, "probs"), y, train, test)
+
+# l1-regularized logistic
+risk(pred_l1, y, train, test)
+
+# l2-regularized logistic
+risk(pred_l2, y, train, test)
+```
+
+
+Session information
+-------------------
+
+```{r}
+sessionInfo()
+```
