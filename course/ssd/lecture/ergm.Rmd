@@ -1,0 +1,158 @@
+```{r setup, cache=FALSE, echo=FALSE, global.par=TRUE}
+library("RColorBrewer")    # brewer.pal
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 100)
+
+# color palette
+palette(brewer.pal(6, "Set1"))
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               highlight=FALSE, tidy=FALSE, warning=FALSE, message=FALSE)
+```
+
+Exponential Random Graph Models
+===============================
+*Patrick O. Perry, NYU Stern School of Business*
+
+Most of the code here is taken from examples from the [ergm R
+package](https://cran.r-project.org/web/packages/ergm/index.html) by the
+following authors: Mark S. Handcock, David R. Hunter, Carter T. Butts, Steven
+M. Goodreau, Pavel N. Krivitsky, Martina Morris, Li Wang, Kirk Li, and Skye
+Bender-deMoll.
+
+
+Preliminaries
+-------------
+
+### Computing environment
+
+
+We will use the following R packages.
+
+```{r}
+library("network")
+library("ergm")
+```
+
+To ensure consistent runs, we set the seed before performing any
+analysis.
+
+```{r}
+set.seed(0)
+```
+
+### Data
+
+We will analyze the Forentine family marriage network.
+
+```{r}
+data(flo)
+```
+
+The previous command loads a `r nrow(flo)`-by-`r ncol(flo)` symmetric binary
+(0/1) matrix. Each row (and column) of this matrix corresponds to one of the
+following prominent families from the Italian Renaissance:
+
+```{r}
+colnames(flo)
+```
+
+Here are the matrix entries (with the row and column labels shortened to
+save space):
+```{r}
+x <- as.matrix(flo)
+colnames(x) <- substr(colnames(flo), 1, 2)
+rownames(x) <- colnames(x)
+x
+```
+
+
+Network objects
+---------------
+
+We create a network object from the adjacency matrix.
+
+```{r}
+(flomarriage <- network(flo, directed=FALSE))
+```
+In our case, the network is undirected, so we specify `directed = FALSE`.
+
+
+Network objects support covariates on the vertices and edges with the `%v%`
+and `%e%` operators, respectively. For example, we can set the wealth (in
+thousands of lira) of each family:
+
+```{r}
+flomarriage %v% "wealth" <- c(10,36,27,146,55,44,20,8,42,103,48,49,10,48,32,3)
+flomarriage
+```
+(Note that `wealth` is now listed as a vertex attribute.)
+
+
+Visualization
+-------------
+
+Here is a plot of the social network.
+
+```{r}
+plot(flomarriage)
+```
+
+Don't read too much into the specific (*x, y*) coordinates for the edges. As
+Mike Mahoney likes to point out, pictures of networks often tell you more
+about the visualization algorithm than they do about the data. When you look
+at a network plot, you should only pay attention to the connectivity
+information.
+
+
+Here is another plot, with the vertex size chosen proportionally to the wealth
+of the family.
+
+```{r}
+plot(flomarriage, vertex.cex=flomarriage %v% "wealth" / 20,
+     main="Marriage Ties")
+```
+
+
+Modeling
+--------
+
+### Dyadic independence
+
+First, we fit a model assuming that edges form independently, with a
+probability that depends on the absolute difference (`absdiff`) between the
+family wealths.
+
+```{r}
+gest <- ergm(flomarriage ~ edges + absdiff("wealth"))
+summary(gest)
+```
+
+In this model, there is no apparent association between wealth and tie
+formation.
+
+
+### Higher-order Markov effects
+
+
+We can expand the model by adding terms for the propensity for families to
+form 2-stars and triangles.
+
+```{r}
+gest <- ergm(flomarriage ~ edges + absdiff("wealth") + kstar(2) + triangle)
+summary(gest)
+```
+
+Even after we include these higher-order effects, there is still no apparent
+association between wealth and tie formation.
+
+
+Session information
+-------------------
+
+```{r}
+sessionInfo()
+```
