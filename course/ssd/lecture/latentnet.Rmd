@@ -1,0 +1,163 @@
+```{r setup, cache=FALSE, echo=FALSE, global.par=TRUE}
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 100)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               highlight=FALSE, tidy=FALSE, warning=FALSE, message=FALSE)
+```
+
+Latent Space Network Models
+===========================
+*Patrick O. Perry, NYU Stern School of Business*
+
+Most of the code here is taken from examples from the [latentnet R
+package](https://cran.r-project.org/web/packages/latentnet/index.html) by the
+following authors: Pavel N. Krivitsky, Mark S. Handcock, Susan M. Shortreed,
+Jeremy Tantrum, Peter D. Hoff, Li Wang, and Kirk Li.
+
+
+Preliminaries
+-------------
+
+### Computing environment
+
+
+We will use the following R packages.
+
+```{r}
+library("latentnet")
+```
+
+To ensure consistent runs, we set the seed before performing any
+analysis.
+
+```{r}
+set.seed(0)
+```
+
+### Data
+
+We will analyze Sampson's monk network.
+
+```{r}
+data(sampson)
+```
+
+The previous command loads a symmetric network called `samplike`, with edges
+indicating monk affinities for each other:
+
+```{r}
+samplike
+```
+
+Latent Position Models
+----------------------
+
+In a latent position model, each node has an associated latent position. Notes
+with nearby latent positions are likely to form ties. To fit such a model, we
+need to specify the distance metric, and the dimension. In the example below,
+we use `euclidean` distance, with `d=2` dimensions.
+
+```{r}
+(samp_fit <- ergmm(samplike ~ euclidean(d=2)))
+```
+
+For more details of the fit, use the `summary` command:
+```{r}
+summary(samp_fit)
+```
+
+We can check the MCMC convergence diagnositics:
+```{r}
+mcmc.diagnostics(samp_fit)
+```
+
+We can also use the estimated latent positions to plot the network.
+```{r}
+plot(samp_fit)
+```
+
+
+Model-Based Clustering Models
+-----------------------------
+
+We can extend the Using Sampson's Monk data, lets fit a latent clustering
+random effects model
+
+```{r}
+(samp_fit2 <- ergmm(samplike ~ euclidean(d=2, G=3)))
+summary(samp_fit2)
+```
+
+Convergence diagnostics:
+```{r}
+mcmc.diagnostics(samp_fit2)
+```
+
+Fitted positions and clusters:
+```{r}
+plot(samp_fit2, pie=TRUE)
+```
+
+Popularity Random Effect
+------------------------
+
+We can add other terms to the model, for example a random effect capturing
+heterogeneous popularities of tie receivers. See the documentation for
+`terms.ergmm` for other possible model terms.
+
+```{r}
+(samp_fit3 <- ergmm(samplike ~ euclidean(d=2, G=3)+rreceiver))
+summary(samp_fit3)
+```
+
+Convergence diagnostics:
+```{r}
+mcmc.diagnostics(samp_fit3)
+```
+
+Fitted positions and clusters:
+```{r}
+plot(samp_fit3, pie=TRUE)
+```
+
+
+Choosing the Number of Clusters
+-------------------------------
+In the examples above, we fixed the number of clusters (`G=3`). We can choose the number of clusters automatically with BICs:
+
+```{r}
+# Fit a set of candidate models
+fits<-list(
+           ergmm(samplike~euclidean(d=2,G=1)),
+           ergmm(samplike~euclidean(d=2,G=2)),
+           ergmm(samplike~euclidean(d=2,G=3)),
+           ergmm(samplike~euclidean(d=2,G=4))
+           )
+
+
+# Comptue the BICs
+(bics<-reshape(
+    as.data.frame(t(sapply(fits,
+                           function(x)c(G=x$model$G,unlist(bic.ergmm(x))[c("Y","Z","overall")])))),
+    list(c("Y","Z","overall")),idvar="G",v.names="BIC",timevar="Component",
+    times=c("likelihood","clustering","overall"),direction="long"
+    ))
+
+# Plot BIC versus number of clusters
+with(bics,interaction.plot(G,Component,BIC,type="b",xlab="Clusters", ylab="BIC"))
+
+# Summarize and plot whichever fit has the lowest overall BIC:
+bestG<-with(bics[bics$Component=="overall",],G[which.min(BIC)])
+summary(fits[[bestG]])
+```
+
+Session information
+-------------------
+
+```{r}
+sessionInfo()
+```
