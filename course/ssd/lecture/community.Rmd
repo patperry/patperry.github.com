@@ -1,0 +1,129 @@
+```{r setup, cache=FALSE, echo=FALSE, global.par=TRUE}
+library("knitr")           # opts_chunk
+
+# terminal output
+options(width = 100)
+
+# code chunk options
+opts_chunk$set(cache=TRUE, fig.align="center", comment=NA, echo=TRUE,
+               highlight=FALSE, tidy=FALSE, warning=FALSE, message=FALSE)
+```
+
+Network Clustering (Community Detection)
+========================================
+*Patrick O. Perry, NYU Stern School of Business*
+
+
+Preliminaries
+-------------
+
+### Computing environment
+
+
+We will use the following R packages.
+
+```{r}
+library("igraph")
+library("igraphdata")
+```
+
+To ensure consistent runs, we set the seed before performing any
+analysis.
+
+```{r}
+set.seed(0)
+```
+
+Zachary's Karate Club
+---------------------
+
+We will first cluster Zachary's Karate Club, one of the most famous network clustering
+datasets.
+
+```{r}
+# Zachary's Karate Club data
+data(karate)
+summary(karate)
+```
+
+The nodes in the graph represent the 34 members in a college Karate club.
+(Zachary is a sociologist, and he was one of the members.) An edge between two
+nodes indicates that the two members spent significant time together outside
+normal club meetings. The dataset is interesting because while Zachary was
+collecting his data, there was a dispute in the Karate club, and it split into
+two factions: one led by "Mr. Hi", and one led by "John A". It turns out that
+using only the connectivity information (the edges), it is possible to recover
+the two factions.
+
+
+The `igraph` package produces a plot of the graph:
+
+```{r}
+plot(karate)
+```
+
+The faction labels are stored in a vertex attribute:
+```{r}
+vertex_attr(karate, "Faction")
+```
+
+Here are the counts of members in each faction:
+```
+table(vertex_attr(karate, "Faction"))
+```
+
+
+
+Clustering
+----------
+
+The `igraph` package implements a variety of network clustering methods, most
+of which are based on Newman-Girvan modularity. To see them all, refer to the
+`?communities` documentation.  The simplest such algorithm is the "fast
+greedy" method, which starts with nodes in separate clusters, and then merges
+clusters together in a greedy fashion.
+
+```{r}
+# Fast greedy modularity-based clustering
+cfg <- cluster_fast_greedy(karate)
+plot(cfg, karate)
+```
+
+
+Specifying number of clusters
+-----------------------------
+
+The `igraph` package does not allow us to specify the number of clusters. However, we
+can simplify the result to a smaller number of clusters using the `cutat` function:
+
+```{r}
+cutat(cfg, 2)
+```
+
+`igraph` does not provide a convenient interface for plotting the result, but the following
+command suffices for this purpuse:
+
+```{r}
+plot(structure(list(membership=cutat(cfg, 2)), class="communities"), karate)
+```
+
+
+Comparison with ground truth
+----------------------------
+
+We can see that the clustering method perfectly recovers the two karate club factions:
+
+```{r}
+table(cutat(cfg, 2), vertex_attr(karate, "Faction"))
+```
+
+This demonstrates that using only edge information, we are able to recover a meaningful
+node attribute.
+
+
+Session information
+-------------------
+
+```{r}
+sessionInfo()
+```

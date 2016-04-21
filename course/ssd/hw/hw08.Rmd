@@ -1,0 +1,82 @@
+Homework 8
+==========
+
+
+Preliminaries
+-------------
+
+### Computing environment
+
+This assignment uses the following packages.
+
+```{r}
+library("igraph")
+```
+
+To ensure consistent runs, set the seed before performing any analysis.
+
+```{r}
+set.seed(0)
+```
+
+
+### Data
+
+Read in the raw data.
+
+```{r}
+wiki <- read.graph("wikipedia.gml", format="gml")
+```
+
+```{r}
+summary(wiki)
+```
+
+```{r}
+# Get vertex labels and id
+vlabel <- vertex_attr(wiki, "label")
+vid <- vertex_attr(wiki, "wikiid")
+```
+
+```{r}
+# Convert to an undirected network; include an edge i ~ j if both
+# i -> j or i <- j exists.
+# (use mode="collapse" to include if *either* i -> j or i <- j exists)
+#g <- as.undirected(wiki, mode="collapse")
+g <- as.undirected(wiki, mode="mutual")
+```
+
+```{r}
+# Cluster the network using the "fast greedy" algorithm
+cfg <- cluster_fast_greedy(g)
+```
+
+```{r}
+# Investigate some of the clusters
+sample(vlabel[cfg$membership == 1], 30) # sample 30 nodes
+sample(vlabel[cfg$membership == 2], 30)
+```
+
+
+```{r}
+# Get the subgraph 1-hop out from the "Wald test" vertex. (specify a higher
+# order to increase the number of hops)
+v <- which(vlabel == "Wald test")
+gv <- make_ego_graph(wiki, order=1, v)[[1]]
+```
+
+```{r}
+# Plot the clusters around the target vertex
+vclust_orig <- cfg$membership[match(vertex_attr(gv, "label"), vlabel)]
+vclust <- as.integer(factor(vclust_orig))
+plot(structure(list(membership=vclust), class="communities"), gv)
+```
+
+
+
+Session information
+-------------------
+
+```{r}
+sessionInfo()
+```
