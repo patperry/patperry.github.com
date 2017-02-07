@@ -1,8 +1,7 @@
----
-title: 'HW1: Problem 2'
-author: (Your name goes here)
-output: html_document
----
+HW1: Problem 2
+==============
+*Your name goes here*
+
 
 In this problem we will consider the daily U.S. Dollar-Euro exchange rate,
 daily, 4 Jan 1999 to 6 Feb 2017 (*n* = 4636).

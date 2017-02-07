@@ -1,8 +1,7 @@
----
-title: 'HW1: Problem 1'
-author: (Your name goes here)
-output: html_document
----
+HW1: Problem 1
+==============
+*Your name goes here*
+
 
 In this problem we will investigate the United States Gross Domestic Product 
 (GDP).  The data file `gdp.csv` contains the real US GDP, quarterly, from 1946, 
