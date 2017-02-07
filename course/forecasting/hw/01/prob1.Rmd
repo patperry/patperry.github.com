@@ -5,8 +5,8 @@ output: html_document
 ---
 
 In this problem we will investigate the United States Gross Domestic Product 
-(GDP).  The data file `gdp.csv` contians the real US GDP, quarterly, from 1946, 
-Q4 to 2014 Q2, seasonally adjusted and inflation adjusted, in billions of 2009 
+(GDP).  The data file `gdp.csv` contains the real US GDP, quarterly, from 1946, 
+Q4 to 2016 Q3, seasonally adjusted and inflation adjusted, in billions of 2009
 dollars.  
 
 
@@ -66,8 +66,8 @@ time <- 1:length(gdp) # create the time variable
 # and use time as your predictor (*not* date).
 ```
 
-Based on the fitted model, we forecast the log(GDP) for the third quarter
-of the year 2014 (time = 272).  
+Based on the fitted model, we forecast the log(GDP) for the fourth quarter
+of the year 2016 (time = 281).
 
 ```{r}
 # Replace with code to predict the value of gdp when time = 272
