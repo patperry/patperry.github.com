@@ -40,7 +40,7 @@ Part B
 Here is a plot of log(GDP).
 
 ```{r}
-log.gdp <- log(gdp) # create the log(GDP) variable
+log_gdp <- log(gdp) # create the log(GDP) variable
 
 # Replace this comment with the code to plot log(GDP) vs. Date
 ```
@@ -61,7 +61,7 @@ time <- 1:length(gdp) # create the time variable
 # Replace this comment with code to fit a linear model and print the
 # fitted coefficients.
 #
-# Hint: Use the "lm" and "summary" commands; use log.gdp as your response
+# Hint: Use the "lm" and "summary" commands; use log_gdp as your response
 # and use time as your predictor (*not* date).
 ```
 
@@ -93,7 +93,7 @@ Part D
 Next is a plot of the log(GDP) series with the fitted line superimposed.
 
 ```{r}
-plot(time, log.gdp, type="l")
+plot(time, log_gdp, type="l")
 
 # Replace this comment with code to add a line to the plot.
 #
