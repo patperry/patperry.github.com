@@ -67,7 +67,7 @@ Part B
 ------
 
 **Based on these two plots, which seems to be a better forecast of Today's
-Russell: Today's Russell, or 0.5 (Yesterday's Russell)?**
+Russell: Yesterday's Russell, or 0.5 (Yesterday's Russell)?**
 
 
 
