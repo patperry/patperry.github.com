@@ -1,8 +1,8 @@
 ---
-title: Forecasting Time Series
+title: "Forecasting Time Series"
+author: "Patrick Perry"
+date: "February 21, 2017"
 subtitle: Autocorrelation
-author: Patrick Perry 
-date: February 24, 2015
 ---
 
 ```{r setup, cache=FALSE, echo=FALSE}
