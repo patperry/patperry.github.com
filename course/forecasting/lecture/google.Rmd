@@ -2,7 +2,7 @@
 title: Forecasting Time Series
 subtitle: Analysis of the Google Series
 author: Patrick Perry 
-date: March 10, 2015
+date: March 7, 2017
 ---
 
 ```{r setup, cache=FALSE, echo=FALSE}

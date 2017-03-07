@@ -2,7 +2,7 @@
 title: Forecasting Time Series
 subtitle: Analysis of the Housing Starts Series
 author: Patrick Perry 
-date: March 10, 2015
+date: March 7, 2017
 ---
 
 ```{r setup, cache=FALSE, echo=FALSE}
@@ -108,8 +108,8 @@ print(fit)
 
 Fitted model is
 
-    [x(t) - 1446.8] = 0.418 * [x(t-1) - 1446.8]
-                    + eps(t) + 0.952 * eps(t-1) + 0.467 * eps(t-2)
+    [x(t) - 1442.5] = 0.425 * [x(t-1) - 1442.5]
+                    + eps(t) + 0.943 * eps(t-1) + 0.464 * eps(t-2)
 
 
 Residuals
