@@ -2,7 +2,7 @@
 title: Forecasting Time Series
 subtitle: Coca-Cola Revenue Analysis
 author: Patrick Perry 
-date: March 24, 2015
+date: March 21, 2017
 ---
 
 ```{r setup, cache=FALSE, echo=FALSE}

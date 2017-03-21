@@ -2,7 +2,7 @@
 title: Forecasting Time Series
 subtitle: Seasonal Models
 author: Patrick Perry
-date: March 24, 2015
+date: March 21, 2017
 ---
 
 ```{r setup, cache=FALSE, echo=FALSE}
@@ -139,7 +139,61 @@ Acf(diff(log.unemp.adj))
 
 ---
 
-Let's try selecting a seasonal ARIMA model with AICC:
+Let's try selecting a seasonal ARIMA model.
+
+
+ACF and PACF to select D and d
+------------------------------
+
+Original Series
+```{r}
+par(mfrow=c(1,2))
+Acf(log.unemp)
+Pacf(log.unemp)
+```
+
+
+First Difference
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(log.unemp))
+Pacf(diff(log.unemp))
+```
+
+Seasonal Difference
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(log.unemp, 12))
+Pacf(diff(log.unemp, 12))
+```
+
+Seasonal Difference of First Difference
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(diff(log.unemp), 12))
+Pacf(diff(diff(log.unemp), 12))
+```
+
+
+Seasonal Difference of Second Difference
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(diff(diff(log.unemp)), 12))
+Pacf(diff(diff(diff(log.unemp)), 12))
+```
+
+
+Second Seasonal Difference of First Difference
+```{r}
+par(mfrow=c(1,2))
+Acf(diff(diff(diff(log.unemp), 12), 12))
+Pacf(diff(diff(diff(log.unemp), 12), 12))
+```
+
+
+
+Chose (p,q) and (P,Q) with AICC
+-------------------------------
 
 ```{r}
 d <- 1
