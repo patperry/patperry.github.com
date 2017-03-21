@@ -2,7 +2,7 @@
 title: Forecasting Time Series
 subtitle: Bootstrap Forecast Intervals
 author: Patrick Perry 
-date: March 24, 2015
+date: March 21, 2017
 ---
 
 ```{r setup, cache=FALSE, echo=FALSE}
@@ -133,8 +133,9 @@ Simulating from The Fitted Model
 ```{r}
 nsim <- 5
 for (i in 1:nsim) {
-    plot(time, hedge, col=2, t="l")
-    lines(time, simulate(fit), col=1)
+    par(mfrow=c(1,2))
+    plot(time, hedge, col=2, type="l")
+    plot(time, simulate(fit), col=1, type="l", ylim=range(hedge))
 }
 ```
 
@@ -144,8 +145,9 @@ Bootstrap Simulations
 ```{r}
 nsim <- 5
 for (i in 1:nsim) {
-    plot(time, hedge, col=2, t="l")
-    lines(time, simulate(fit, bootstrap=TRUE), col=1)
+    par(mfrow=c(1,2))
+    plot(time, hedge, col=2, type="l")
+    plot(time, simulate(fit, bootstrap=TRUE), col=1, type="l", ylim=range(hedge))
 }
 ```
 
@@ -178,8 +180,8 @@ Is This Useful?
 ```{r}
 hedge.forecast <- fitted.values(fit)
 
-summary(hedge)                     # 296 observations
-summary(hedge[hedge.forecast > 0]) # 282 observations
-summary(hedge[hedge.forecast > 1]) # 145 observations
-summary(hedge[hedge.forecast > 2]) # only 8 observations
+summary(hedge)                     # 324 observations
+summary(hedge[hedge.forecast > 0]) # 304 observations
+summary(hedge[hedge.forecast > 1]) # 141 observations
+summary(hedge[hedge.forecast > 2]) # only 7 observations
 ```
