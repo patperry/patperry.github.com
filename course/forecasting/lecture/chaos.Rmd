@@ -2,7 +2,7 @@
 title: Forecasting Time Series
 subtitle: Chaos
 author: Patrick Perry 
-date: March 31, 2015
+date: March 28, 2017
 ---
 
 ```{r setup, cache=FALSE, echo=FALSE}
