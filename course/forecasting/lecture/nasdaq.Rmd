@@ -2,7 +2,7 @@
 title: Forecasting Time Series
 subtitle: NASDAQ Analysis
 author: Patrick Perry 
-date: April 4, 2015
+date: April 4, 2017
 ---
 
 ```{r setup, cache=FALSE, echo=FALSE}
