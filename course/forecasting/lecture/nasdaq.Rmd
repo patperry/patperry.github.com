@@ -2,7 +2,7 @@
 title: Forecasting Time Series
 subtitle: NASDAQ Analysis
 author: Patrick Perry 
-date: April 7, 2015
+date: April 4, 2015
 ---
 
 ```{r setup, cache=FALSE, echo=FALSE}
@@ -134,9 +134,30 @@ Pacf(diff.log.NASDAQ)
 ARIMA Model
 -----------
 
+Pick an Arima model.
+
+```{r}
+best <- Arima(diff.log.NASDAQ, c(0, 0, 0), include.constant=FALSE)
+for (p in 0:3) {
+    for (q in 0:3) {
+        for (ic in c(FALSE, TRUE)) {
+            try({
+                fit <- Arima(diff.log.NASDAQ, c(p, 0, q), include.constant=ic)
+                if (fit$aicc < best$aicc) {
+                    best <- fit
+                }
+            })
+        }
+    }
+}
+print(best)
+```
+
+Fit the model.
+
 ```{r}
 # p, q, constant chosen by AICc
-fit <- Arima(log.NASDAQ, c(3,1,0), include.constant=TRUE)
+fit <- Arima(log.NASDAQ, c(3,1,3), include.constant=TRUE)
 print(fit)
 ```
 
