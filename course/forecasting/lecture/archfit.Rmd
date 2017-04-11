@@ -114,7 +114,7 @@ Selected Model
 --------------
 
 ```{r}
-fit.tseries <- garch(x, c(0, 2), trace=FALSE)
+fit.tseries <- garch(x, c(0, q[which.min(aicc)]), trace=FALSE)
 summary(fit.tseries)
 ```
 
