@@ -2,7 +2,7 @@
 title: Forecasting Time Series
 subtitle: Fitting and Diagnostic Checking for ARCH Models
 author: Patrick Perry 
-date: April 14, 2015
+date: April 11, 2017
 ---
 
 ```{r setup, cache=FALSE, echo=FALSE}
