@@ -2,7 +2,7 @@
 title: Forecasting Time Series
 subtitle: Bear Stearns Data Analysis
 author: Patrick Perry 
-date: April 21, 2015
+date: April 18, 2017
 ---
 
 ```{r setup, cache=FALSE, echo=FALSE}
