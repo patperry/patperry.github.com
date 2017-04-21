@@ -18,7 +18,7 @@ Topic Models
 *Patrick O. Perry, NYU Stern School of Business*
 
 Most of the code here is taken from Chapter 10.3 of Taylor Arnold and Lauren
-Tilton's book, [Humanities Data in R](http://http://humanitiesdata.org/).
+Tilton's book, [Humanities Data in R](http://humanitiesdata.org/).
 
 
 Preliminaries
