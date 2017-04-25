@@ -2,7 +2,7 @@
 title: Forecasting Time Series
 subtitle: Estimating Average Inflation
 author: Patrick Perry 
-date: April 28, 2015
+date: April 25, 2017
 ---
 
 ```{r setup, cache=FALSE, echo=FALSE}
@@ -37,7 +37,7 @@ Data
 
 **Raw Data**
 ```{r}
-# US CPI, Jan 1947 - Jan 2015, Monthly
+# US CPI, Jan 1947 - Jan 2017, Monthly
 data <- read.csv("http://ptrckprry.com/course/forecasting/data/cpi.csv")
 head(data)
 tail(data)
@@ -140,7 +140,7 @@ Simulating ARFIMA
 -----------------
 
 ```{r}
-x <- fracdiff.sim(n = 5000, d = 0.373)$series
+x <- fracdiff.sim(n = 5000, d = 0.39)$series
 ```
 
 **TS Plot**
@@ -177,6 +177,6 @@ mean.x + c(-1,1) * 1.96 * se.x
 **Invalid due to Long Memory in Series!**
 
 ```{r}
-1/sqrt(n)          # With indep. observations, SE is of this order
-n^(2 * 0.373 - 1)  # With long-memory, this order instead
+1/sqrt(n)         # With indep. observations, SE is of this order
+n^(2 * 0.39 - 1)  # With long-memory (d = 0.39), this order instead
 ```

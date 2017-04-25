@@ -2,7 +2,7 @@
 title: Forecasting Time Series
 subtitle: Long Memory
 author: Patrick Perry 
-date: April 28, 2015
+date: April 25, 2017
 ---
 
 ```{r setup, cache=FALSE, echo=FALSE}
@@ -37,7 +37,7 @@ Data Sets
 ---------
 
 ```{r}
-# US CPI, Jan 1947 - Jan 2015, Monthly
+# US CPI, Jan 1947 - Jan 2017, Monthly
 cpi.data <- read.csv("http://ptrckprry.com/course/forecasting/data/cpi.csv")
 cpi <- cpi.data$cpi
 log.cpi <- log(cpi)
@@ -46,7 +46,7 @@ log.cpi <- log(cpi)
 
 
 ```{r}
-# US Unemployment Rate, Jan 1948 - Feb 2015, Montly, Seasonally adjusted
+# US Unemployment Rate, Jan 1948 - Jan 2017, Montly, Seasonally adjusted
 unemp.data <- read.csv("http://ptrckprry.com/course/forecasting/data/unemployment.csv")
 unemp <- unemp.data$unemployment
 log.unemp <- log(unemp)
@@ -54,7 +54,7 @@ log.unemp <- log(unemp)
 
 
 ```{r}
-# Russell 2000 Index, Sep 10, 1987 - Feb 11, 2015, Daily
+# Russell 2000 Index, Sep 10, 1987 - Feb 10, 2017, Daily
 russell.data <- read.csv("http://ptrckprry.com/course/forecasting/data/russell.csv")
 russell <- russell.data$russell
 log.russell <- log(russell)
@@ -62,7 +62,7 @@ log.russell <- log(russell)
 
 
 ```{r}
-# VIX Volatility Index, Jan 2, 2004 - Apr 27, 2015, Daily
+# VIX Volatility Index, Jan 2, 2004 - Apr 20, 2017, Daily
 vix.data <- read.csv("http://ptrckprry.com/course/forecasting/data/vix.csv")
 vix <- vix.data$vix.adjclose
 log.vix <- log(vix)
@@ -90,12 +90,12 @@ make.plots <- function(x, main="", lag.max=100)
     Acf(x, lag.max=lag.max, main=paste0("Series: ", ylab))
 }
 
-make.plots(log.russell, "Log(Russell 2000 Index), Sep 10, 1987 - Feb 11, 2015")
-make.plots(log.cpi, "Log(US CPI), Jan 1947 - Jan 2015")
-make.plots(log.vix, "Log(VIX Spot Volatility Index), Jan 2, 2004 - Apr 27, 2015")
-make.plots(log.unemp, "Log(US Unemployment), Jan 1948 - Feb 2015")
+make.plots(log.russell, "Log(Russell 2000 Index), Sep 10, 1987 - Feb 10, 2017")
+make.plots(log.cpi, "Log(US CPI), Jan 1947 - Jan 2017")
+make.plots(log.vix, "Log(VIX Spot Volatility Index), Jan 2, 2004 - Apr 20, 2017")
+make.plots(log.unemp, "Log(US Unemployment), Jan 1948 - Jan 2017")
 make.plots(log.snpvol, "Log(Daily Realized S&P500 Vol), Feb 1, 1983 - June 29, 2000")
-make.plots(logrange.vix, "VIX Log Range, Jan 2, 2004 - Apr 27, 2015")
+make.plots(logrange.vix, "VIX Log Range, Jan 2, 2004 - Apr 20, 2017")
 ```
 
 
@@ -104,7 +104,7 @@ Dow
 ---
 
 ```{r}
-# DJIA, Dec 12, 1914 - Jan 28, 2015
+# DJIA, Dec 12, 1914 - Feb 6, 2017
 data.dow <- read.csv("http://ptrckprry.com/course/forecasting/data/dow.csv")
 dow <- data.dow$dow
 ```
@@ -193,8 +193,8 @@ cat("SE: ", fit2$sd.reg, "\n")
 **Method 3**
 
 ```{r}
-## fit3 <- arfima(ret.dow) # sometimes works, sometimes crashes R
-## summary(fit3)
+fit3 <- arfima(ret.dow) # sometimes works, sometimes crashes R
+summary(fit3)
 ```
 
 
