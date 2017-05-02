@@ -2,7 +2,7 @@
 title: Forecasting Time Series
 subtitle: Unit Root Tests & Cointegration
 author: Patrick Perry 
-date: May 5, 2015
+date: May 2, 2017
 ---
 
 ```{r setup, cache=FALSE, echo=FALSE}
@@ -42,7 +42,7 @@ Exchange Rate Data
 # Daily exchange rates for UK pounds and the Euro, 
 # from January 2004 to December 2007, per US dollar.
 #
-xrates <- read.table("http://staff.elena.aut.ac.nz/Paul-Cowpertwait/ts/us_rates.dat",
+xrates <- read.table("http://www.maths.adelaide.edu.au/andrew.metcalfe/Data/us_rates.dat",
                      header=TRUE)
 n <- nrow(xrates)
 time <- 1:n
